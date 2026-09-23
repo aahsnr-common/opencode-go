@@ -1,70 +1,71 @@
 {
+  "$schema": "https://app.kilo.ai/config.json",
   "model": "kilo-code/claude-sonnet-4-5",
   "permissions": [
     {
       "action": "shell",
       "resource": "*",
-      "effect": "ask"
+      "effect": "ask",
     },
     {
       "action": "shell",
       "resource": "git status *",
-      "effect": "allow"
+      "effect": "allow",
     },
     {
       "action": "shell",
       "resource": "git diff *",
-      "effect": "allow"
+      "effect": "allow",
     },
     {
       "action": "shell",
       "resource": "git log *",
-      "effect": "allow"
+      "effect": "allow",
     },
     {
       "action": "shell",
       "resource": "ls *",
-      "effect": "allow"
+      "effect": "allow",
     },
     {
       "action": "shell",
       "resource": "cat *",
-      "effect": "allow"
+      "effect": "allow",
     },
     {
       "action": "shell",
       "resource": "grep *",
-      "effect": "allow"
+      "effect": "allow",
     },
     {
       "action": "shell",
       "resource": "rg *",
-      "effect": "allow"
+      "effect": "allow",
     },
     {
       "action": "shell",
       "resource": "python3 -m pytest *",
-      "effect": "allow"
+      "effect": "allow",
     },
     {
       "action": "shell",
       "resource": "uv run *",
-      "effect": "allow"
+      "effect": "allow",
     },
     {
       "action": "shell",
       "resource": "uvx *",
-      "effect": "allow"
+      "effect": "allow",
     },
     {
       "action": "shell",
       "resource": "git push *",
-      "effect": "ask"
+      "effect": "ask",
     },
     {
       "action": "shell",
       "resource": "rm -rf *",
-      "effect": "deny"
-    }
-  ]
+      "effect": "deny",
+    },
+  ],
 }
