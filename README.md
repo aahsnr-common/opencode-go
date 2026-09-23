@@ -6,30 +6,22 @@ currently offers, with agent/permission guardrails, model choices for specific
 work scenarios, deep-research plumbing, IDE/GUI integration and productivity MCP
 servers.
 
-Everything here is **v2-only**; the LiteLLM governance layer that used to live in
-this folder has been removed (Go already meters in dollars, and a self-hosted
-proxy adds latency and risks breaking prompt caching). The Pydantic/LangGraph MCP
-servers that used to live in this folder have also been removed (see §12 for what
-that means for this folder's file list) — they added real quota/context cost for
-a job a single strong-model subagent does more cheaply (§6, §7). **Coming from
-v1?** Jump to **§4 — Migrating from v1 to v2**; v1 and v2 are no longer installed
-side by side.
+Everything here is **v2-only** and self-contained: every config file this guide
+installs — `opencode.jsonc`, `cli.json`, `AGENTS.md`, `.env.example` — ships as a
+copy-paste code block in §5, so there are no separate files to clone. Configs are
+audited against the live v2 docs (§13); see §12 for the one-file-per-block map.
+
+> **In a hurry?** Jump to **§4 — the 15-minute quick start**: install → connect
+> Go → drop in the two config files → daily loop, agent/model cheat sheets and
+> the five quota rules. The rest of this guide is the "why" behind every choice.
 
 > OpenCode moves fast. Model lists, caps and config keys change. The pages under
 > <https://opencode.ai/v2/docs> and <https://opencode.ai/docs/go> are authoritative;
-> re-check them and `/models` before trusting exact IDs or caps. This revision was
-> audited against those pages on **2026-09-23** (see §13/§14); the Go docs page
-> itself is stamped "Last updated: Sep 22, 2026."
->
-> **Independent verification pass (2026-09-23):** a second, independent audit
-> re-fetched `opencode.ai/v2/docs`, `opencode.ai/docs/go`, and `opencode.ai/go`
-> directly and cross-checked the pricing table, request estimates, model list,
-> and version numbers below. Full results are in the new **§15 — Independent
-> audit findings** at the end of this file. Headline: the Go pricing table and
-> request-count table check out almost line-for-line against the live docs; the
-> flagged 2.0.6-vs-2.0.14 version gap is real and reproducible; but Anomaly's own
-> marketing pages are inconsistent about a **"$5 first month"** promo (see §15.1)
-> that this guide's headline price doesn't mention either way.
+> re-check them and `/models` before trusting exact IDs or caps. This guide was
+> audited against those pages on **2026-09-23** (see §13/§14) and independently
+> re-verified the same day (§15 — including Anomaly's own inconsistent "$5 first
+> month" promo language, §15.1); the Go docs page itself is stamped
+> "Last updated: Sep 22, 2026."
 
 ---
 
@@ -53,7 +45,7 @@ side by side.
   nesting depth is one.**
 - **Git worktrees are first-class.** `Ctrl+M` in the dialog moves a session into a
   fresh worktree; set the parent directory with
-  `"worktree": { "directory": "../worktrees" }`. }`
+  `"worktree": { "directory": "../worktrees" }`.
 - **Snapshots / checkpoints.** Before each model step OpenCode snapshots the step's
   files (git-backed, best effort). `/undo` (`Ctrl+X U`) stages a rollback and puts
   the prompt back in the composer; `/redo` (`Ctrl+X R`) cancels a staged rollback.
@@ -118,8 +110,8 @@ side by side.
   CLI can too (`prompt.image_preview` in `cli.json`, §5.1, just toggles whether it
   previews the image inline). **That's a client-side attachment feature, separate
   from whether the selected model can actually read the image** — but "separate"
-  doesn't mean "only one model can," which an earlier revision of this section
-  wrongly implied (see the correction in §13). The model picker's capability icons
+  doesn't mean "only one model can" (see §13 for the catalog-vs-backend picture).
+  The model picker's capability icons
   (what you're hovering over if you're looking at `/models` or the console) come
   from the same Models.dev catalog OpenCode fetches live (§1), and by that catalog
   **several** Go models are tagged with image input, not just
@@ -251,8 +243,8 @@ From [opencode.ai/docs/go](https://opencode.ai/docs/go) and the v2 console docs 
   | Kimi K3 | 110 | $15 | flagship reasoning model, priciest bucket |
 
   Not in the usage/estimate tables but still live on the endpoints page — **not**
-  the privacy page, where this guide's earlier wording was too broad (see §15.3):
-  **MiniMax M2.5** (legacy sibling of M2.7, Anthropic-compatible endpoint) — the
+  the privacy page (see §15.3): **MiniMax M2.5** (legacy sibling of M2.7,
+  Anthropic-compatible endpoint) — the
   Go landing page counts **30 models** total where the table above accounts for
   29 rows (30 distinct models once the combined Muse Spark row is split), so
   treat M2.5 as a still-reachable legacy option rather than a headline pick.
@@ -294,17 +286,10 @@ specific agents and workflows.
 
 ## 3. Install v2 (Fedora and Arch)
 
-> **v1 must be removed first.** "OpenCode 1 and OpenCode 2 both use the `opencode`
-> command and are no longer installed side by side by default. Remove a
-> package-managed V1 installation before installing V2; the V2 curl installer
-> replaces the V1 binary." Configuration and session-data locations are shared.
-> **Note (independent audit, 2026-09-23):** a live re-fetch of
-> `opencode.ai/v2/docs` confirms the installer still just calls the binary
-> `opencode` (no separate `opencode2` command), consistent with this claim. Be
-> aware some older cached/indexed copies of the same docs page (from earlier in
-> the v2 beta) described a distinct `opencode2` binary that *could* run
-> side-by-side with v1 — that appears to be a historical, now-superseded state
-> of the docs rather than the current one. See §15.4.
+> One `opencode` command: installing v2 replaces any v1 install in place (the v2
+> curl installer overwrites the v1 binary), and configuration and session-data
+> locations are shared. Older cached copies of the docs page describing a separate
+> `opencode2` binary installable next to v1 are superseded (§15.4).
 
 ### Fedora
 
@@ -317,11 +302,10 @@ curl -fsSL https://opencode.ai/v2/install | bash
 ```
 
 Standalone CLI binaries are published for macOS, Windows and Linux (glibc/musl,
-x64/ARM64) directly off the v2 docs intro page — as of this pass (2026-09-23) that
-page's links resolve to build **2.0.6**, not 2.0.14 (see §13). Confirm your
-installed version with `opencode --version` rather than trusting a specific
-number in this guide. (Windows package managers are not supported; use the
-standalone binary.)
+x64/ARM64) directly off the v2 docs intro page — as of the 2026-09-23 audit those
+links resolve to build **2.0.6** (see §13/§15.2). Confirm your installed version
+with `opencode --version` rather than trusting a specific number in this guide.
+(Windows package managers are not supported; use the standalone binary.)
 
 ### Arch Linux
 
@@ -331,25 +315,23 @@ paru -S opencode-beta
 # or via the Homebrew tap: brew install anomalyco/tap/opencode-v2
 ```
 
-`opencode-beta` conflicts with `opencode`/`opencode2`. This pass did **not**
-re-open the AUR package page to confirm its current version pin — check
+`opencode-beta` conflicts with `opencode`/`opencode2`. The AUR package's current
+version pin was not re-verified on 2026-09-23 — check
 <https://aur.archlinux.org/packages/opencode-beta> directly before assuming any
 specific build number.
 
 ### Desktop (v2 is available)
 
-- **Direct downloads** (<https://opencode.ai/download>, refetched this pass):
-  macOS (Apple Silicon / Intel), Windows (**x64 only** in this pass's fetch — no
-  ARM64 link was present), Linux `.deb` / `.rpm` (**no AppImage link** was present
-  in this pass's fetch, and no ARM64 variant for either package format). If you
-  need Windows ARM64, a Linux AppImage, or ARM64 `.deb`/`.rpm`, check the download
-  page yourself — an earlier draft of this guide claimed all of those existed and
-  this pass could not confirm they still do.
-- **Arch:** `paru -S opencode-desktop-bin` (conflicts with `opencode-desktop`) —
-  version not re-verified this pass.
+- **Direct downloads** (<https://opencode.ai/download>, fetched 2026-09-23):
+  macOS (Apple Silicon / Intel), Windows (**x64 only** at that fetch — no ARM64
+  link present), Linux `.deb` / `.rpm` (no AppImage link, and no ARM64 variant
+  for either package format at that fetch). If you need Windows ARM64, a Linux
+  AppImage, or ARM64 `.deb`/`.rpm`, check <https://opencode.ai/v2/docs> before
+  concluding the build doesn't exist — that page listed a fuller platform matrix
+  and the two pages disagree (§15.2).
+- **Arch:** `paru -S opencode-desktop-bin` (conflicts with `opencode-desktop`).
 - **Homebrew:** `brew install --cask opencode-desktop` is listed directly on the
-  download page now; whether the cask has caught up to the current stable Desktop
-  build was not re-checked this pass.
+  download page.
 
 ### Web UI (same config, password-protected)
 
@@ -367,55 +349,79 @@ Docker images use versioned tags, e.g. `ghcr.io/anomalyco/opencode:2.0.0`.
 
 ---
 
-## 4. Migrating from v1 to v2
+## 4. The 15-minute quick start (if you read nothing else)
 
-The full guide is <https://opencode.ai/v2/docs/migrate-v1/>. The short version:
+**Goal:** a working, quota-aware v2 + Go setup with the guardrails from §5, plus
+the muscle memory to use it well. Every file mentioned below ships as a
+copy-paste code block in §5; everything here is verified against the live docs
+(§13). The rest of the guide is the "why" behind each step.
 
-**Intentional breaking changes (only three):** plugins use a new API; the server API
-and clients have new contracts (`@opencode/client`); terminal config moves from
-layered `tui.json(c)` to one global `cli.json` (auto-migrated).
+### 4.1 One-time setup (~10 minutes)
 
-**Practical migration order:**
+1. **Install v2.** Fedora/generic: `curl -fsSL https://opencode.ai/v2/install | bash`
+   (or npm/bun/pnpm/yarn — §3). Arch: `paru -S opencode-beta`. Desktop apps:
+   <https://opencode.ai/download>. Verify with `opencode --version`.
+2. **Get Go.** Sign in at the OpenCode console/Zen → subscribe to **OpenCode Go**
+   ($10/mo; a "$5 first month" promo may apply depending on the sign-up path,
+   §15.1; one Go subscription per workspace) and copy the API key.
+3. **Connect.** Run `opencode` → `/connect` → **OpenCode Go** → paste the key →
+   `/models` should list the ~30 Go models (IDs look like `opencode-go/…`).
+4. **Drop in the config (§5).** Copy the §5 block to
+   `~/.config/opencode/opencode.jsonc` and the §5.1 block to
+   `~/.config/opencode/cli.json`. That one pair gives you model routing, the six
+   agents, permission guardrails, compaction and the `/review`-style workflows.
+   OpenCode picks up config changes automatically.
+5. **Optional, per project.** Copy the §5.3 `AGENTS.md` into the repo root and
+   fill in its `<fill in>` lines; copy §5.4 to `.env` only if you want websearch
+   (needs one provider key) or a non-OpenCode API client (§9.1).
 
-1. Keep your existing config and `.opencode/` files — v2 reads the same locations
-   (`~/.config/opencode/opencode.json(c)`, `<project>/opencode.json(c)`,
-   `<project>/.opencode/opencode.json(c)`) and normalizes supported v1 fields.
-2. Start v2 and verify models, credentials, agents, permissions and MCP servers
-   (`/models`, `/agents`, `/mcps`).
-3. Port plugins — v1 plugin code does **not** run in v2.
-4. Port integrations that call the server API.
-5. When ready, convert config to the native v2 shape (optional, can be done
-   incrementally). The recommended way is to ask OpenCode itself:
-   *"Migrate my OpenCode configuration, including file-based definitions, from the
-   V1 format to the native V2 format. Preserve its behavior and all unrelated
-   settings."*
-6. Keep a v1 copy while validating; don't point v1 at files you've converted to
-   v2-only shapes.
+### 4.2 The daily loop (~5 minutes to learn)
 
-**Field / file mapping (the ones that matter here):**
+- `cd` into the repo → `opencode` → type the task. The default `build` agent on
+  `mimo-v2.6-flash` handles normal feature work (30,100 req/5h bucket).
+- Permission prompts: **Allow once**, **Allow always** (saved per project; a
+  saved approval never overrides a configured `deny`), or **Reject**. Read-only
+  git (`git status`/`git diff`) is pre-allowed and `rm -rf` is pre-denied by the
+  §5 rules.
+- **Steer instead of retyping:** `/undo` (`Ctrl+X U`) rolls the last step back
+  and puts the prompt back in the composer for editing; `/redo` (`Ctrl+X R`)
+  cancels a staged rollback. Headed the wrong way? Start fresh (`Ctrl+X N`).
+- **Pick the right agent** (`Shift+Tab` cycles, `/agents` lists): `plan` to
+  scope before code is touched (read-only), `quickfix` for one-file chores,
+  `architect` only for genuinely hard multi-file debugging, `vision` for
+  screenshot/diagram turns (paste the image into the composer), `longread` to
+  pre-digest huge logs/docs, `/research` for web research (§8). Workflow
+  commands: `/review`, `/plan-feature`, `/test`, `/research` (§5).
+- **Sessions & tabs:** `Ctrl+X N` new · `Ctrl+X L`/`/sessions` list ·
+  `Ctrl+Tab`/`Ctrl+Shift+Tab` switch tabs · `Ctrl+X W` close · `Ctrl+Shift+T`
+  reopen · `Ctrl+O` recent sessions/projects · `Ctrl+M` move session into a git
+  worktree. Leader is `Ctrl+X`; `/models` is `Ctrl+X M` (`F2` cycles recent
+  models); `/compact` summarizes a bloated session in place.
+- **Scripting:** `opencode run "…"` for one-shots, `-c` to continue the last
+  session, `opencode mini` for the minimal interface.
 
-| v1 | v2 | Notes |
-|---|---|---|
-| `permission: { edit, bash: { "cmd*": "..." } }` | `permissions: [{ action, resource, effect }]` | `bash` → `shell`; `task` → `subagent`; ordered, **last match wins**; effects `allow`/`ask`/`deny`. |
-| `agent: { name: {...} }` | `agents: { name: {...} }` | Legacy per-agent `temperature`, `tools`, `permission`, `disable`, `maxSteps` are discouraged; use `model`, `permissions`, `steps`, `mode`, `hidden`, `color`, `disabled`. |
-| `command: {...}`, `subtask: true` | `commands: {...}`, `subagent: true` | `subtask` still accepted; `subagent` wins if both are set. |
-| `autoupdate: true` | `update: "auto" \| "notify" \| "disable"` | Default `notify`. |
-| `compaction: { auto, prune, reserved }` | `compaction: { auto, keep: { tokens }, buffer }` | v2 is checkpoint-based; tail-turn pruning is gone. |
-| `lsp` | — | Not supported in v2; use lint/typecheck commands in AGENTS.md or a skill. |
-| `share` | `share` | Accepted but inert: v2 doesn't support session sharing yet. |
-| `server: { port }` | `opencode serve --port …` / `opencode service set port …` | No `server` config key. |
-| `subagent_depth` | — | v2 nesting depth defaults to one; no config equivalent verified. |
-| `small_model` | built-in `title`/`summary` agents | Override their model via `agents.title.model` / `agents.summary.model` (verify with `/agents`). |
-| `instructions: [...]` | AGENTS.md only | v2 **accepts but does not load** `instructions` entries. |
-| `tui.json(c)` (layered) | `~/.config/opencode/cli.json` | Auto-migrated on first v2 TUI start; **project-local client config is not migrated**. |
-| `plugin: [pkg, [opts]]` | `plugins: [pkg, { package, options }]` | New plugin API; port entrypoints/hooks/tools. |
-| `enabled_providers` / `disabled_providers` | `experimental.policies: [{action:"provider.use", resource, effect}]` | Policies never prompt and only tighten. |
-| MCP `mcp: { name: {…, enabled: true} }` | `mcp: { servers: { name: {…, disabled: false} } }` | Server objects; `cwd`, `environment`, `timeout:{startup,catalog,execution}`, `protocol`, `codemode`. |
-| `.opencode/agent\|command\|skill\|plugin/` | `.opencode/agents\|commands\|skills\|plugins/` | Singular forms still discovered for some types (`skill/`, `command/`, `plugin/`), but use plural for new files. |
-| Server API v1 HTTP | `@opencode/client` + v2 API reference | Integrations must be ported. |
+### 4.3 The five quota rules (full playbook: §6)
 
-**Verify after migrating:** `opencode --version`, `opencode service status`,
-`/models`, `/agents`, `/mcps`, and one real edit+shell task.
+1. Stay on the default `build` agent. `architect` (`kimi-k3`, 110 req/5h — the
+   smallest bucket) is for the few genuinely hard sessions, not the default.
+2. Keep one session per task and reuse it (`-c`, `/sessions`): stable sessions
+   earn prompt-cache discounts; new sessions re-pay cold context.
+3. `/compact` after big explorations; `title`/`summary` agents are already
+   pinned to the cheap default model in §5.
+4. Leave `warming: false` — warming requests are real, billable model calls.
+5. Watch the Console for per-model burn and reset timers; a dry bucket resets
+   on its 5-hour/weekly/monthly cycle (§2), and "Use balance" can bridge with
+   pay-as-you-go credits if you enable it.
+
+### 4.4 When something breaks
+
+- Diagnostics: `opencode service status|restart|stop|start`,
+  `opencode api get /api/info`, logs at
+  `~/.local/share/opencode/log/opencode.log` (§1).
+- MCP servers won't connect → `/mcps`, then §8/§11. Websearch silent → set a
+  provider key (§5.4). IDE completions → §9; GUI/Desktop → §10; document
+  generation (docx/pptx/xlsx/pdf) → §11; model/quota questions → §2.
+- Upstream troubleshooting page: <https://opencode.ai/v2/docs/troubleshooting>.
 
 ---
 
@@ -426,13 +432,13 @@ Config precedence (later wins): global → `OPENCODE_CONFIG` → project
 override per project only when genuinely needed. `{env:VAR}` and `{file:path}`
 substitution work anywhere in the config.
 
-This folder's [opencode.jsonc](opencode.jsonc) is this exact content, ready to
-copy to `~/.config/opencode/`:
+The block below is the complete global config — copy it to
+`~/.config/opencode/opencode.jsonc`:
 
 ```jsonc
 {
   // Global OpenCode v2 config. Copy to ~/.config/opencode/opencode.jsonc
-  // (v2 also reads plain .json). Verified against OpenCode v2.0.14, Sep 2026.
+  // (v2 also reads plain .json). Keys verified against the live v2 docs, Sep 2026.
   "$schema": "https://opencode.ai/config.json",
 
   // ---- Core -----------------------------------------------------------
@@ -440,7 +446,7 @@ copy to `~/.config/opencode/`:
   "default_agent": "build",
   "update": "notify",
 
-  // ---- Agents (v2: "agents" — v1's "agent" + small_model are gone) ---
+  // ---- Agents ----------------------------------------------------------
   // Each agent's model is picked for its scenario, not just its price — see §6/§7
   // for the full reasoning behind every assignment below.
   "agents": {
@@ -483,15 +489,14 @@ copy to `~/.config/opencode/`:
         { "action": "webfetch", "resource": "*", "effect": "allow" }
       ]
     },
-    // Built-in title/summary agents run on every session; keep them cheap.
-    // (v2 replacement for v1's small_model — verify with /agents.)
+    // Built-in title/summary agents run on every session; keep them cheap
+    // (verify with /agents).
     "title": { "model": "opencode-go/mimo-v2.6-flash" },
     "summary": { "model": "opencode-go/mimo-v2.6-flash" }
   },
 
   // ---- Permissions ----------------------------------------------------
   // Ordered rules; LAST match wins, so broad rules come first.
-  // (v2 action for shell is "shell", not v1's "bash".)
   "permissions": [
     { "action": "shell", "resource": "*", "effect": "ask" },
     { "action": "shell", "resource": "git status *", "effect": "allow" },
@@ -541,7 +546,7 @@ copy to `~/.config/opencode/`:
   // v2 nests servers under mcp.servers and uses `disabled` (not `enabled`).
   // Servers connect automatically unless disabled. A project-level override
   // REPLACES the whole server object, so repeat every required field there.
-  // This revision ships with no local MCP servers by default — see §11 for the
+  // This config ships with no MCP servers by default — see §11 for the
   // productivity servers (GitHub, Notion, Linear, Google Calendar, Obsidian)
   // and §8 for the research-oriented ones (paper-search).
   "mcp": {
@@ -565,9 +570,10 @@ copy to `~/.config/opencode/`:
   // Warming is off by default and sends billable requests when enabled.
   "warming": false
 
-  // Removed vs the old v1-based config (see §4 for replacements):
-  //   share, autoupdate, small_model, subagent_depth, lsp, server,
-  //   instructions, permission{bash}, agent{}, command{}, mcp{<name>}, provider{}
+  // Deliberately absent (not v2 config keys): share, autoupdate, small_model,
+  //   subagent_depth, lsp, server, instructions, permission{bash}, agent{},
+  //   command{}, mcp{<name>}, provider{} — their v2 equivalents live above
+  //   (update, agents, permissions, commands, mcp.servers) or don't exist (§1).
 }
 ```
 
@@ -575,8 +581,11 @@ Notes:
 
 - **Do not** add `"instructions": ["AGENTS.md"]` — AGENTS.md is auto-loaded; v2
   ignores `instructions` entries anyway (they never reach the model).
-- `share`, `lsp`, `server`, `autoupdate`, `small_model`, `subagent_depth` are v1
-  concepts: omitted here on purpose (§4 says what replaces each).
+- Not v2 config keys, omitted on purpose: `share` (session sharing is
+  unsupported), `lsp` (use AGENTS.md lint/typecheck commands or a skill),
+  `server` (use `opencode serve`), `autoupdate` (use `update: "notify"`, set
+  above), `small_model` (the built-in `title`/`summary` agents replace it), and
+  `subagent_depth` (v2 nesting depth is one).
 - `watcher.ignore` still exists as a config section in the v2 docs; its exact shape
   was not re-verified in this audit — if your build warns, drop it (it's a
   nice-to-have, not load-bearing).
@@ -585,9 +594,9 @@ Notes:
   providers, e.g.
   `"experimental": { "policies": [{ "action": "provider.use", "resource": "openai", "effect": "deny" }] }`.
 
-### 5.1 CLI settings — `~/.config/opencode/cli.json` (replaces `tui.json`)
+### 5.1 CLI settings — `~/.config/opencode/cli.json`
 
-This folder's [cli.json](cli.json) is the same content:
+Copy this to `~/.config/opencode/cli.json`:
 
 ```json
 {
@@ -610,9 +619,9 @@ Only `~/.config/opencode/cli.json` is read (or
 `$XDG_CONFIG_HOME/opencode/cli.json`); there is **no project-local client config**.
 Unknown settings are rejected, valid edits reload live, and `$schema` is added
 automatically when v2 creates or migrates the file. `OPENCODE_CLI_CONFIG_CONTENT`
-can override settings inline for one run. Full key list: `theme`, `animations`,
-`cursor`, `mouse`, `scroll`, `prompt`, `session`, `tabs`, `diffs`, `alerts`,
-`terminal`, `mini`, `keybinds`, `leader`, `plugins`, `debug`, `experimental`.
+can override settings inline for one run. Full key list: `theme`, `animations`, `attention`, `cursor`, `mouse`, `scroll`,
+`prompt`, `session`, `tabs`, `diffs`, `terminal`, `mini`, `keybinds`, `leader`,
+`plugins`, `debug`, `experimental`.
 
 **Which file governs which client:** `opencode.jsonc` (§5) is read by the shared
 background service (§1) — TUI, Desktop and Web are all clients of that one
@@ -627,7 +636,7 @@ quota, so there's nothing cost-relevant to configure there beyond §5.
 ### 5.2 Project files
 
 - **`AGENTS.md`** (project root, committed): auto-loaded; nested `AGENTS.md` files
-  load as the agent explores that area. This folder's [AGENTS.md](AGENTS.md) (§5.3)
+  load as the agent explores that area. The §5.3 block
   is the example. Global personal rules go in `~/.config/opencode/AGENTS.md` — keep
   them short, since they ride along in every context window you pay for.
 - **`.opencode/`** in a project: `agents/`, `commands/`, `skills/`, `plugins/`
@@ -636,8 +645,8 @@ quota, so there's nothing cost-relevant to configure there beyond §5.
 ### 5.3 Project rules — `AGENTS.md`
 
 Read by every client (TUI, Desktop, Web) via the shared server (§1) — there's
-nothing client-specific to configure here. This folder's [AGENTS.md](AGENTS.md) is
-this exact content:
+nothing client-specific to configure here. The block below is the exact
+`AGENTS.md` content:
 
 ```markdown
 # AGENTS.md
@@ -665,7 +674,8 @@ top-level file short, since it rides along in every context window you pay for.
 - Escalate to `architect` only for genuinely hard multi-file/architecture work —
   it's the smallest bucket in the lineup.
 - Route screenshots, diagrams or rendered PDF pages through the `vision`
-  subagent explicitly; the default agent's model can't see images (see §1/§9).
+  subagent explicitly — it's the one model whose image handling Go actually
+  documents (§1/§9).
 - Long logs/configs/docs go through `longread` first, not straight into `build`.
 ```
 
@@ -674,9 +684,8 @@ top-level file short, since it rides along in every context window you pay for.
 Only for the optional layers (websearch providers, non-OpenCode clients like
 Continue, §9.1); OpenCode's own Go/Copilot/ChatGPT logins are handled by
 `opencode auth login` / `/connect` and stored in its credential DB (§1.1), not in
-any `.env` file. Copy to `.env` (already covered by [`.gitignore`](#12-what-lives-in-this-folder),
-§12) and fill in only what you actually use — this folder's
-[.env.example](.env.example) is this exact content:
+any `.env` file. Copy to `.env` (already covered by `.gitignore`, §12) and fill in
+only what you actually use — the block below is the exact `.env.example` content:
 
 ```bash
 # Copy to .env (already listed in .gitignore, §12) and fill in only what you use.
@@ -741,7 +750,7 @@ OPENCODE_GO_API_KEY=
 
 ## 7. Optimizing for agentic programming
 
-- **Match the agent to the scenario, not just the price.** §5 now ships six
+- **Match the agent to the scenario, not just the price.** §5 ships six
   agents, each tuned to a distinct kind of work instead of one-size-fits-all:
   - `build` (default, `mimo-v2.6-flash`) — the everyday driver for normal
     feature work; huge bucket (30,100 req/5h), 0-day retention, no training.
@@ -1038,98 +1047,81 @@ context upfront, so a big skills folder doesn't tax everyday token usage.
 ## 12. What lives in this folder
 
 ```
-README.md            this guide (v2-only, verified Sep 2026)
-AGENTS.md            project-level agent rules (§5.3, auto-loaded in this folder)
-opencode.jsonc       the global config from §5 — copy to ~/.config/opencode/
-cli.json             terminal settings from §5.1 — copy to ~/.config/opencode/
-.env.example         env vars for the optional layers (§5.4: websearch keys, etc.)
-.gitignore           keeps .env, caches, and test artifacts out of git
-.zcodeignore         auto-synced mirror of .gitignore for the ZCode workspace
+README.md     this guide — every config file it "installs" ships as a
+              copy-paste code block inside it (map below)
+.gitignore    keeps .env and local junk out of git
 ```
 
-Removed in this revision: `config.yaml` and `docker-compose.yml` (the LiteLLM +
-Postgres + Redis layer), `tui.json` (v1 client config, replaced by `cli.json`), and
-`server.py` / `mcp_server.py` / `graph.py` — the Pydantic-validated project-ops
-tools and LangGraph review pipeline. They still work if you want to reintroduce
-them (pin `mcp[cli]>=1.30,<2` if you do — `pip install mcp` now resolves to 2.x,
-which removed `mcp.server.fastmcp`), but this revision drops them: a single-call
-`architect` subagent (§5, §7) gets the same reviewed-diff outcome for roughly a
-third of the LLM calls, with no extra tool-schema context cost on every session.
+There are no separate config files to clone or keep in sync. Each config ships
+as a code block in this README — copy each one to the path shown:
+
+| File | Block | Copy to |
+|---|---|---|
+| `opencode.jsonc` | §5 | `~/.config/opencode/opencode.jsonc` (global) |
+| `cli.json` | §5.1 | `~/.config/opencode/cli.json` (global terminal settings) |
+| `AGENTS.md` | §5.3 | the root of any project that should follow the rules (committed) |
+| `.env.example` | §5.4 | the project root, as `.env` (git-ignored) |
 
 ---
 
 ## 13. Verification log (2026-09-23)
 
-This revision was re-audited directly against the live pages (not against a prior
-draft's claims) on **2026-09-23**:
+This guide was audited directly against the live pages (not against its own
+claims) on **2026-09-23**:
 
 - **Go model lineup and pricing** — fetched <https://opencode.ai/docs/go/> directly
   (page stamped "Last updated: Sep 22, 2026") and cross-checked against
-  <https://opencode.ai/go>. The full 29-model "current list of models," every
-  per-model monthly cap, every 5-hour request estimate, the Peak/Off-Peak
-  DeepSeek split, and the privacy/retention table in §2 and §13 come straight off
-  that page — this closes out gaps a previous pass had marked "—" (not
-  independently verified) for models like LongCat-2.0, Qwen3.7/3.8 Flash/Max,
-  MiniMax M2.7/M3, MiMo-Pro variants, GLM-5.2/5.1, Grok 4.7/4.6, Qwen3.7 Max and
-  GPT 5.6 Luna. **MiniMax M2.5** appears only in the **Endpoints** table now (not
-  in "current list of models," usage-limits, estimated-requests, *or* Privacy) —
-  a same-day re-fetch during this revision found it had already dropped out of
-  the Privacy table since an earlier pass noted it there, so treat it as legacy
-  and don't rely on this guide's privacy claims for it specifically. The
-  **DeepSeek V4.1 Flash 4× promo and its Sep 27, 2026 end date** are stated
-  verbatim on the live pricing table, not a rumor.
-- **"Only vision-capable model" claim — corrected, not just re-checked.** An
-  earlier pass in this revision re-fetched the live Go docs and concluded
-  `deepseek-v4-flash-vision-exp` was still the only vision-capable model in the
-  lineup. **That was wrong**, caught by a reader's own screenshot of the model
-  picker showing GLM-5.3-Flash's capability icons expanding, on hover, to
-  include an image tag. Checking further: OpenCode's model picker/console draws
-  its capability icons from the same live Models.dev catalog OpenCode itself
-  fetches (§1) — it isn't the Go docs page. That catalog data (cross-checked via
-  a third-party Models.dev-sourced listing, `pi.dev/models/opencode-go/*`) shows
-  `opencode-go/glm-5.3-flash` declared with `"input": ["text", "image"]`, while
-  e.g. `hy3` and `hy4-preview` are declared `"input": ["text"]` only — so image
-  tagging in the catalog is real, model-specific data, not a UI default. What
-  the Go docs page actually documents is narrower and shouldn't have been read
-  as "the only model that takes images": it calls out per-image-token billing
-  for `deepseek-v4-flash-vision-exp` specifically and says nothing about image
-  billing for any other model, which is a documentation gap, not evidence of
+  <https://opencode.ai/go>. The full "current list of models," every per-model
+  monthly cap, every 5-hour request estimate, the Peak/Off-Peak DeepSeek split,
+  and the privacy/retention table in §2 come straight off that page.
+  **MiniMax M2.5** appears only in the **Endpoints** table (not in "current list
+  of models," usage-limits, estimated-requests, *or* Privacy) — treat it as
+  legacy and don't rely on privacy claims for it specifically. The **DeepSeek
+  V4.1 Flash 4× promo and its Sep 27, 2026 end date** are stated verbatim on the
+  live pricing table.
+- **Image input on Go — catalog vs backend.** OpenCode's model picker and
+  console draw their capability icons from the live Models.dev catalog OpenCode
+  itself fetches (§1), not from the Go docs page. That catalog data
+  (cross-checked via a third-party Models.dev-sourced listing,
+  `pi.dev/models/opencode-go/*`) shows `opencode-go/glm-5.3-flash` declared with
+  `"input": ["text", "image"]`, while e.g. `hy3` and `hy4-preview` are declared
+  `"input": ["text"]` only — so image tagging in the catalog is real,
+  model-specific data, not a UI default. What the Go docs page actually
+  documents is narrower: it calls out per-image-token billing for
+  `deepseek-v4-flash-vision-exp` specifically and says nothing about image
+  billing for any other model — a documentation gap, not evidence of
   incapability elsewhere. Complicating this further, a reported issue
   ([lidge-jun/opencodex#4505](https://github.com/lidge-jun/opencodex/issues/4505))
   describes the Go backend maintaining its own `noVisionModels` denylist that
   overrides the catalog's declared image support for at least
   `deepseek-v4.1-flash` — so catalog-tagged image support and actual Go-backend
-  image handling can diverge in the other direction too. Net effect: this guide
-  no longer claims Vision Exp is the only image-capable model on Go (§1/§5/§7/§8
-  corrected above), but it also doesn't claim GLM-5.3-Flash's image input is
-  confirmed working through the Go endpoint specifically — that needs a real
-  test send, not just a catalog icon or a docs page, before you'd rely on it for
-  anything that has to work.
+  image handling can diverge in either direction. Net effect: §1/§5/§7/§8 route
+  images through `vision` as the *documented* safe default, but a catalog tag
+  is a first signal, not a guarantee — send a real test image on the model you
+  intend to use before relying on image input for anything that has to work.
 - **v2 product surface** — refetched <https://opencode.ai/v2/docs> directly: the
   intro page confirms the shared install flow (`curl .../v2/install`, `npm i -g
   @opencode/cli`, etc.), Desktop/Web/Docker instructions, and that OpenCode Go is
   presented as the recommended low-cost provider. The docs' left-nav (config,
   agents, models, skills, commands, plugins, providers, websearch, network,
   snapshots, compaction, formatters, references, attachments, tools, mcp-servers,
-  permissions, policies, instructions, sharing, warming) matches what earlier
-  passes described; **Sharing** and **Instructions** were not independently
-  re-opened this pass — treat those two specific claims (no session sharing yet;
-  `instructions` entries accepted but unloaded) as carried over, not re-verified.
+  permissions, policies, instructions, sharing, warming) matches this guide's §1
+  description; **Sharing** and **Instructions** were not independently
+  re-verified — treat those two specific claims (no session sharing yet;
+  `instructions` entries accepted but unloaded) as documented but unconfirmed.
 - **⚠ Version discrepancy — worth running `opencode --version` yourself.** The
   live v2 docs intro page's CLI/Desktop download links currently resolve to build
-  **2.0.6** (e.g. `.../files/bin/2.0.6/opencode-darwin-arm64.zip`), not 2.0.14.
+  **2.0.6** (e.g. `.../files/bin/2.0.6/opencode-darwin-arm64.zip`).
   Separately, <https://opencode.ai/download> lists installers via `curl`,
   `npm`, `brew install anomalyco/tap/opencode-v2`, and `paru/yay -S opencode-beta`
   for the CLI, and `brew install --cask opencode-desktop` plus direct "stable"
-  download links for Desktop — but that page's Desktop section only shows macOS
-  (Apple Silicon/Intel), Windows (x64), and Linux .deb/.rpm; it did **not** show a
-  Windows ARM64 build or a Linux AppImage in this pass's fetch, where an earlier
-  draft of this guide claimed both existed. Reconcile the "v2.0.14" figure (this
-  revision's title no longer asserts a specific version number for that reason)
-  against `opencode --version` and the AUR package pages before relying on it; the
-  discrepancy could reflect a lagging CDN cache on the docs page, a beta/dev
-  channel AUR build running ahead of the stable download page, or simply that both
-  pages had moved on again by the time you're reading this.
+  download links for Desktop — but that page's Desktop section only showed macOS
+  (Apple Silicon/Intel), Windows (x64), and Linux .deb/.rpm at the 2026-09-23
+  fetch, with no Windows ARM64 build or Linux AppImage. Reconcile any version
+  figure against `opencode --version` and the AUR package pages before relying
+  on it; the discrepancy could reflect a lagging CDN cache on the docs page, a
+  beta/dev channel AUR build running ahead of the stable download page, or
+  simply that both pages had moved on again by the time you're reading this.
   **Independently reconfirmed 2026-09-23:** a direct re-fetch of
   `opencode.ai/v2/docs` still resolves every CLI and Desktop binary link to
   build **2.0.6** — this is real and reproducible, not a one-off cache glitch.
@@ -1138,7 +1130,7 @@ draft's claims) on **2026-09-23**:
   glibc/musl x64/ARM64, and Desktop builds including Linux **AppImage** for
   both x64 and ARM64) — so if `opencode.ai/download` is genuinely narrower, as
   this guide's fetch found, that's an inconsistency *between two of Anomaly's
-  own pages*, not just a stale draft in this guide. Practical takeaway: for any
+  own pages*, not a stale claim in this guide. Practical takeaway: for any
   platform `opencode.ai/download` seems to be missing, check
   `opencode.ai/v2/docs` before concluding the build doesn't exist. See §15.2.
 - **Open issues used as caveats** — #48330 (Copilot legacy-plan request drain),
@@ -1160,10 +1152,6 @@ draft's claims) on **2026-09-23**:
 and everything under "Ecosystem" and "Open issues" above. Treat the Go docs page
 and `/models` as the source of truth for model IDs/caps, and <https://opencode.ai/v2/docs>
 as the source of truth for product behavior, since both move fast.
-
-**Removed in this revision:** the "Optional: Pydantic + LangGraph MCP servers"
-section and its accompanying `server.py`/`mcp_server.py`/`graph.py` files (§12) —
-per request, all Pydantic/LangGraph content has been stripped from this guide.
 
 ---
 
@@ -1216,9 +1204,9 @@ per request, all Pydantic/LangGraph content has been stripped from this guide.
 
 This section documents a second, independent verification pass done from
 outside this guide's own authorship — re-fetching Anomaly's live pages rather
-than trusting this guide's earlier self-reported citations. It confirms most of
-the guide's numbers, finds the guide's own flagged uncertainties are real, and
-surfaces a couple of things worth tightening.
+than trusting the guide's own self-reported citations. It confirms most of
+the guide's numbers, finds its flagged uncertainties are real, and surfaces a
+couple of things worth tightening.
 
 ### 15.1 Pricing: a genuine inconsistency on Anomaly's own pages, not this guide
 
@@ -1239,9 +1227,9 @@ may apply depending on which sign-up path is used.
 
 Directly re-fetching `opencode.ai/v2/docs` reproduced the exact discrepancy
 this guide flagged: every CLI and Desktop download link on that page currently
-resolves to build **2.0.6**. This guide's decision to stop asserting "2.0.14"
-in its own title is the right call — `opencode --version` remains the only
-reliable source for the number actually running on a given machine.
+resolves to build **2.0.6**. This guide deliberately avoids asserting a specific build in its title —
+`opencode --version` remains the only reliable source for the number actually
+running on a given machine.
 Separately, that same intro page turned out to list a **fuller** platform
 matrix (Windows ARM64, Linux AppImage for both x64/ARM64, ARM64 `.deb`/`.rpm`)
 than this guide's fetch of `opencode.ai/download` found — see the note added at
@@ -1257,15 +1245,14 @@ all matched exactly. The "current list of models" bullet on the live docs page
 has **30** entries (this guide's 29-row table accounts for all of them once the
 combined Muse Spark 1.3/1.2 row is split into two), and **MiniMax M2.5** is
 confirmed present in the token-price and endpoints tables but genuinely absent
-from both the "current list of models" bullet *and* the privacy table — this
-guide's original wording ("still live on the endpoints/privacy pages") overstated
-that slightly, since M2.5 isn't actually on the privacy page; corrected at §2.
+from both the "current list of models" bullet *and* the privacy table (§2
+reflects this).
 
 ### 15.4 v1/v2 coexistence: current docs support this guide, older cached copies don't
 
-This guide's central framing — that v1 and v2 share the `opencode` command and
-aren't installed side-by-side — matches a direct, live re-fetch of
-`opencode.ai/v2/docs` today. However, an older indexed/cached snapshot of what
+The §3 note's framing — v1 and v2 share the `opencode` command and aren't
+installed side-by-side — matches a direct, live re-fetch of
+`opencode.ai/v2/docs` on 2026-09-23. However, an older indexed/cached snapshot of what
 appears to be the same docs page (surfaced via general web search rather than a
 direct fetch) described OpenCode 2 running as a separate `opencode2` binary
 installable alongside v1. This is very likely just an artifact of the docs
