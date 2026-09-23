@@ -1,0 +1,34 @@
+# Local secrets (credentials are supplied via environment variables; only .env.example is tracked)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# uv
+# (script dependencies are embedded in PEP 723 blocks; no project lock file expected)
+
+# Test and tooling caches / output
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+report.json
+
+# Logs
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp

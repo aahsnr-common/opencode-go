@@ -1,0 +1,276 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // ---------------------------------------------------------------------
+  // Core
+  // ---------------------------------------------------------------------
+  "autoupdate": true,
+  "share": "manual",
+  "default_agent": "build",
+  "subagent_depth": 2, // build/architect -> code-review/project-ops subagents
+
+  // ---------------------------------------------------------------------
+  // Models
+  //
+  // Tiering follows OpenCode Go's own guidance (opencode.ai/docs/go):
+  //   cheap tier    -> routine edits, grep/search, docs, agent tool-calling
+  //   strong tier   -> multi-file refactors, subtle debugging
+  //   premium tier  -> sparingly, for hard planning/review
+  //
+  // "litellm/*" model IDs are resolved by the custom "litellm" provider
+  // below, which points at your self-hosted LiteLLM proxy (see
+  // litellm/config.yaml). Route anything that needs centralized spend
+  // tracking, budgets, or multi-cloud fallback (Azure/Bedrock/Vertex)
+  // through LiteLLM; route high-volume/cheap coding traffic through Go.
+  // ---------------------------------------------------------------------
+  "model": "opencode-go/deepseek-v4-flash",
+  "small_model": "opencode-go/mimo-v2.6-flash",
+
+  "provider": {
+    "opencode-go": {
+      "options": {
+        "timeout": 300000
+      }
+    },
+
+    "litellm": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LiteLLM Gateway",
+      "options": {
+        "baseURL": "{env:LITELLM_BASE_URL}/v1",
+        "apiKey": "{env:LITELLM_VIRTUAL_KEY}",
+        "timeout": 600000,
+        "headers": {
+          // Tag every request so it's easy to filter in the LiteLLM /spend
+          // and Langfuse dashboards.
+          "X-Litellm-Tags": "opencode,coding-agent"
+        }
+      },
+      // These model_name values must match the model_list entries in
+      // litellm/config.yaml.
+      "models": {
+        "claude-sonnet-4-5": {
+          "name": "Claude Sonnet 4.5 (LiteLLM)",
+          "limit": { "context": 200000, "output": 64000 }
+        },
+        "gpt-5.2": {
+          "name": "GPT-5.2 (LiteLLM)",
+          "limit": { "context": 272000, "output": 32000 }
+        },
+        "azure-gpt-5-mini": {
+          "name": "Azure GPT-5 mini (LiteLLM)",
+          "limit": { "context": 272000, "output": 32000 }
+        }
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------------
+  // MCP servers
+  //
+  // Both are disabled globally via `tools` below and re-enabled only for
+  // the agents that need them (see the "Per agent" pattern documented at
+  // opencode.ai/docs/mcp-servers#manage). This keeps their tool schemas
+  // out of the context window for build/plan/architect.
+  //
+  // Both are launched with `uv run <script>.py`. Each script carries a
+  // PEP 723 inline metadata block declaring its own dependencies, so `uv`
+  // creates an ephemeral, cached venv on first run -- no manual venv or
+  // requirements.txt install step required.
+  // ---------------------------------------------------------------------
+  "mcp": {
+    "pydantic-tools": {
+      "type": "local",
+      "command": ["uv", "run", ".opencode/mcp/pydantic-tools/server.py"],
+      "enabled": true,
+      "timeout": 15000
+    },
+
+    "langgraph-agent": {
+      "type": "local",
+      "command": ["uv", "run", ".opencode/mcp/langgraph-agent/mcp_server.py"],
+      "enabled": true,
+      "timeout": 30000,
+      "environment": {
+        // The LangGraph node LLM calls are themselves routed through the
+        // LiteLLM gateway -- one governance/observability layer for both
+        // OpenCode's own model calls and the sub-agent's.
+        "LITELLM_BASE_URL": "{env:LITELLM_BASE_URL}",
+        "LITELLM_API_KEY": "{env:LITELLM_VIRTUAL_KEY}",
+        "LITELLM_MODEL": "{env:LANGGRAPH_MODEL}"
+      }
+    },
+
+    // Optional: if you deploy the same graph to LangGraph Platform /
+    // LangSmith's Agent Server, it exposes a native MCP endpoint at
+    // `/mcp` (Streamable HTTP) and you can swap the local server above
+    // for this remote one instead. Disabled by default.
+    "langgraph-cloud": {
+      "type": "remote",
+      "url": "{env:LANGGRAPH_DEPLOYMENT_URL}/mcp",
+      "enabled": false,
+      "headers": {
+        "X-Api-Key": "{env:LANGSMITH_API_KEY}"
+      }
+    }
+  },
+
+  "tools": {
+    "pydantic-tools*": false,
+    "langgraph-agent*": false,
+    "langgraph-cloud*": false
+  },
+
+  // ---------------------------------------------------------------------
+  // Agents
+  // ---------------------------------------------------------------------
+  "agent": {
+    "build": {
+      "mode": "primary",
+      "description": "Default coding agent: fast, cheap Go model for routine edits, tests, and tool-calling.",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+        // To restrict which subagents `build` may invoke via the Task
+        // tool, add a "task" key here, e.g. "task": { "*": "allow" }.
+        // See opencode.ai/docs/agents#task-permissions.
+      }
+    },
+
+    "plan": {
+      "mode": "primary",
+      "model": "opencode-go/glm-5.3",
+      "description": "Read-only planning/analysis. Edits and bash both require approval (built-in default)."
+    },
+
+    "architect": {
+      "mode": "primary",
+      "description": "Strong-reasoning agent for architecture decisions, multi-file refactors, and hard debugging. Routed through LiteLLM for spend tracking and multi-cloud fallback.",
+      "model": "litellm/claude-sonnet-4-5",
+      "temperature": 0.1,
+      "permission": {
+        "edit": "ask",
+        "bash": "ask"
+      }
+    },
+
+    "code-review": {
+      "mode": "subagent",
+      "description": "Delegates code-review-style requests to the LangGraph plan->analyze->summarize workflow running behind the langgraph-agent MCP tool. Use for 'review this diff' / 'review my changes' style requests.",
+      "model": "opencode-go/mimo-v2.5",
+      "steps": 8,
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "webfetch": "deny"
+      },
+      "tools": {
+        "langgraph-agent*": true
+      }
+    },
+
+    "project-ops": {
+      "mode": "subagent",
+      "description": "Runs validated project operations (pytest, internal metrics queries) through the pydantic-tools MCP server. Every input/output is Pydantic-validated, so results are structured, not free text.",
+      "model": "opencode-go/deepseek-v4-flash",
+      "steps": 6,
+      "permission": {
+        "edit": "deny"
+      },
+      "tools": {
+        "pydantic-tools*": true
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------------
+  // Guardrails
+  // ---------------------------------------------------------------------
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "*": "ask",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "ls*": "allow",
+      "cat *": "allow",
+      "grep *": "allow",
+      "python3 -m pytest*": "allow",
+      "uv run*": "allow",
+      "git push*": "ask",
+      "rm -rf *": "deny"
+    },
+    "webfetch": "ask",
+    "external_directory": "deny"
+  },
+
+  // ---------------------------------------------------------------------
+  // Commands
+  // ---------------------------------------------------------------------
+  "command": {
+    "review": {
+      "template": "Review the current working diff (`git diff`). Delegate to the code-review subagent (langgraph-agent MCP tool) and report its verdict and findings.",
+      "description": "LangGraph-powered code review of the working diff",
+      "agent": "build"
+    },
+    "test": {
+      "template": "Use the project-ops subagent's run_tests tool to run the test suite for $ARGUMENTS and summarize any failures.",
+      "description": "Run tests via the Pydantic-validated pytest MCP tool",
+      "agent": "build"
+    },
+    "plan-feature": {
+      "template": "Acting as the architect agent, produce a short implementation plan (files to touch, risks, test strategy) for: $ARGUMENTS. Do not write code yet.",
+      "description": "Draft an implementation plan with the architect agent",
+      "agent": "architect"
+    }
+  },
+
+  // ---------------------------------------------------------------------
+  // Everything else
+  // ---------------------------------------------------------------------
+  "instructions": ["AGENTS.md"],
+
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 20000 // extra headroom: MCP tool schemas (pydantic + langgraph) add context
+  },
+
+  "watcher": {
+    "ignore": [
+      "node_modules/**",
+      "dist/**",
+      ".git/**",
+      "**/.venv/**",
+      "**/__pycache__/**",
+      "**/.pytest_cache/**"
+    ]
+  },
+
+  "formatter": {
+    "ruff-format": {
+      "command": ["uvx", "ruff", "format", "$FILE"],
+      "extensions": [".py"]
+    }
+  },
+
+  "lsp": true,
+
+  "server": {
+    "port": 4096
+  }
+
+  // ---------------------------------------------------------------------
+  // Optional / experimental (commented out)
+  // ---------------------------------------------------------------------
+  // Force *all* model traffic through governed channels (Go + LiteLLM)
+  // by denying direct use of a raw provider. `experimental.policies` is
+  // unstable and may change -- see opencode.ai/docs/policies.
+  //
+  // "experimental": {
+  //   "policies": [
+  //     { "effect": "deny", "action": "provider.use", "resource": "openai" }
+  //   ]
+  // }
+}
