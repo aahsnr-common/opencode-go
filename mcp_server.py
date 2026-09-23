@@ -1,10 +1,10 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "mcp[cli]>=1.6.0",
+#   "mcp[cli]>=1.30,<2",
 #   "pydantic>=2.7",
-#   "langgraph>=0.6",
-#   "langchain-openai>=0.3",
+#   "langgraph>=1.0",
+#   "langchain-openai>=1.6",
 #   "langchain-core>=0.4",
 # ]
 # ///
@@ -15,6 +15,10 @@ Wraps the LangGraph plan -> analyze -> summarize workflow (graph.py) as a
 single MCP tool, `run_code_review`. Input and output are Pydantic models,
 so OpenCode's `code-review` subagent gets a typed JSON Schema for the tool
 and a structured, validated result -- not a wall of text to reparse.
+
+NOTE: the MCP Python SDK 2.x removed `mcp.server.fastmcp`; this file targets
+the maintained 1.x line (`pip install mcp` pulls 2.x), hence the "<2" pin in
+the PEP 723 block above. Verified working on mcp 1.30.0 with langgraph 1.2.12.
 
 Run directly with: uv run mcp_server.py
 """

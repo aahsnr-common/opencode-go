@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "mcp[cli]>=1.6.0",
+#   "mcp[cli]>=1.30,<2",
 #   "pydantic>=2.7",
 #   "pytest>=8.0",
 #   "pytest-json-report>=1.5",
@@ -19,6 +19,9 @@ Protocol. Every tool's input and output is a Pydantic v2 model, so:
     silently doing the wrong thing.
   - Results come back as validated, structured data -- not prose the model
     has to reinterpret.
+
+NOTE: the MCP Python SDK 2.x removed `mcp.server.fastmcp`; this file targets
+the maintained 1.x line (latest 1.30.0), hence the "<2" pin above.
 
 Run directly with: uv run server.py
 (the PEP 723 block above pins the ephemeral env's dependencies)
@@ -128,7 +131,8 @@ class QueryMetricsResult(BaseModel):
 def query_metrics(request: QueryMetricsRequest) -> QueryMetricsResult:
     """Query an internal metrics backend for a service. Replace the body with a
     real client (Prometheus/Datadog/etc.) -- this stub returns a deterministic
-    placeholder so the tool is runnable out of the box."""
+    placeholder so the tool is runnable out of the box, and MUST stay disabled
+    in agents until it is wired to a real backend."""
     unit_map = {
         "latency_p95_ms": "ms",
         "error_rate": "%",

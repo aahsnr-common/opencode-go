@@ -2,10 +2,12 @@
 A small LangGraph workflow: plan -> analyze -> summarize.
 
 State is a Pydantic model (langgraph supports Pydantic v2 state schemas
-natively), and the LLM used at each node is an OpenAI-compatible client
-pointed at the LiteLLM gateway rather than a provider SDK directly -- so
-these calls get the same budgeting, fallback, and observability as every
-other model call in the stack.
+natively), and the LLM used at each node is an OpenAI-compatible client.
+There is no gateway hop anymore: point it straight at an OpenAI-compatible
+endpoint (by default OpenCode Go) via GRAPH_BASE_URL / GRAPH_API_KEY /
+GRAPH_MODEL. Pick a model that is served on /v1/chat/completions — models
+served only on the Anthropic /v1/messages shape will not work through
+ChatOpenAI.
 
 Imported by mcp_server.py; not meant to be run directly.
 """
@@ -19,14 +21,14 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
-LITELLM_BASE_URL = os.environ.get("LITELLM_BASE_URL", "http://localhost:4000")
-LITELLM_API_KEY = os.environ.get("LITELLM_API_KEY", "sk-litellm-virtual-opencode")
-LITELLM_MODEL = os.environ.get("LITELLM_MODEL", "claude-sonnet-4-5")
+GRAPH_BASE_URL = os.environ.get("GRAPH_BASE_URL", "https://opencode.ai/zen/go/v1")
+GRAPH_API_KEY = os.environ.get("GRAPH_API_KEY") or os.environ.get("OPENCODE_GO_API_KEY", "")
+GRAPH_MODEL = os.environ.get("GRAPH_MODEL", "hy3")
 
 llm = ChatOpenAI(
-    model=LITELLM_MODEL,
-    base_url=f"{LITELLM_BASE_URL}/v1",
-    api_key=LITELLM_API_KEY,
+    model=GRAPH_MODEL,
+    base_url=GRAPH_BASE_URL,
+    api_key=GRAPH_API_KEY,
     temperature=0.1,
 )
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/v2/cli.json",
+  "mouse": true,
+  "scroll": { "speed": 3 },
+  "prompt": { "paste": "compact", "image_preview": false },
+  "session": {
+    "sidebar": "auto",
+    "thinking": "hide",
+    "tps": true,
+    "markdown": "rendered"
+  },
+  "keybinds": { "leader": "ctrl+x" },
+  "leader": { "timeout": 2000 }
+}
