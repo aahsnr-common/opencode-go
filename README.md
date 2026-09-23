@@ -20,6 +20,16 @@ side by side.
 > re-check them and `/models` before trusting exact IDs or caps. This revision was
 > audited against those pages on **2026-09-23** (see §13/§14); the Go docs page
 > itself is stamped "Last updated: Sep 22, 2026."
+>
+> **Independent verification pass (2026-09-23):** a second, independent audit
+> re-fetched `opencode.ai/v2/docs`, `opencode.ai/docs/go`, and `opencode.ai/go`
+> directly and cross-checked the pricing table, request estimates, model list,
+> and version numbers below. Full results are in the new **§15 — Independent
+> audit findings** at the end of this file. Headline: the Go pricing table and
+> request-count table check out almost line-for-line against the live docs; the
+> flagged 2.0.6-vs-2.0.14 version gap is real and reproducible; but Anomaly's own
+> marketing pages are inconsistent about a **"$5 first month"** promo (see §15.1)
+> that this guide's headline price doesn't mention either way.
 
 ---
 
@@ -104,6 +114,26 @@ side by side.
   `providers.<id>.package: "@opencode/ai/providers/openai-compatible"` + `settings.baseURL`.
 - **Clients.** TUI, **Desktop v2** (macOS/Windows/Linux), browser UI
   (`opencode pair`), extensions for VS Code / Cursor / Zed / Windsurf / VSCodium.
+  Desktop and Web both let you attach/paste a screenshot into the composer — the
+  CLI can too (`prompt.image_preview` in `cli.json`, §5.1, just toggles whether it
+  previews the image inline). **That's a client-side attachment feature, separate
+  from whether the selected model can actually read the image** — but "separate"
+  doesn't mean "only one model can," which an earlier revision of this section
+  wrongly implied (see the correction in §13). The model picker's capability icons
+  (what you're hovering over if you're looking at `/models` or the console) come
+  from the same Models.dev catalog OpenCode fetches live (§1), and by that catalog
+  **several** Go models are tagged with image input, not just
+  `deepseek-v4-flash-vision-exp` — GLM-5.3-Flash is a confirmed example. What the
+  Go docs page (§2) actually documents is narrower: only
+  `deepseek-v4-flash-vision-exp` gets an explicit per-image-token billing line,
+  and there's a reported case
+  ([lidge-jun/opencodex#4505](https://github.com/lidge-jun/opencodex/issues/4505))
+  of the Go backend's own vision denylist overriding the catalog's declared image
+  support for at least one other model (DeepSeek V4.1 Flash). So: the catalog tag
+  is a reasonable first signal, not a guarantee — if a screenshot-heavy task
+  matters, send a real test image on the model you intend to use and confirm it's
+  actually read before relying on it, rather than trusting either "the icon says
+  image" or last revision's "only one model does this" at face value.
 - **Not in v2 (yet):**
   - **Session sharing**: "OpenCode V2 does not support session sharing yet." The
     `share` field is accepted and inert.
@@ -196,8 +226,8 @@ From [opencode.ai/docs/go](https://opencode.ai/docs/go) and the v2 console docs 
   | LongCat-2.0 | 11,400 | $60 | |
   | DeepSeek V4.1 Flash | ~~6,500~~ **26,000** | ~~$15~~ **$60** | 4× promo, ends **Sep 27, 2026** — reverts to $15/6,500 after |
   | DeepSeek V4 Flash | 13,000 | $30 | |
-  | DeepSeek V4 Flash Vision Exp | 6,500 | $15 | vision-capable |
-  | GLM-5.3-Flash | 6,320 | $60 | |
+  | DeepSeek V4 Flash Vision Exp | 6,500 | $15 | only model with documented per-image-token billing (§13) |
+  | GLM-5.3-Flash | 6,320 | $60 | catalog-tagged for image input too — unverified on Go specifically, see §13 |
   | Qwen3.8 Flash | 5,400 | $30 | |
   | Qwen3.7 Plus | 4,300 | $60 | |
   | Hy3 | 4,300 | $60 | |
@@ -220,13 +250,24 @@ From [opencode.ai/docs/go](https://opencode.ai/docs/go) and the v2 console docs 
   | Qwen3.8 Max | 160 | $15 | |
   | Kimi K3 | 110 | $15 | flagship reasoning model, priciest bucket |
 
-  Not in the usage/estimate tables but still live on the endpoints/privacy pages:
-  **MiniMax M2.5** (legacy sibling of M2.7, Anthropic-compatible endpoint, 0-day
-  retention) — the Go landing page counts **30 models** total where the table
-  above accounts for 29, so treat M2.5 as a still-reachable legacy option rather
-  than a headline pick. DeepSeek prices split into **Peak** (01:00–04:00 and
-  06:00–10:00 UTC, Mon–Fri) and **Off-Peak** (all other hours, including
-  weekends) token rates; the request estimates above use typical mixed usage.
+  Not in the usage/estimate tables but still live on the endpoints page — **not**
+  the privacy page, where this guide's earlier wording was too broad (see §15.3):
+  **MiniMax M2.5** (legacy sibling of M2.7, Anthropic-compatible endpoint) — the
+  Go landing page counts **30 models** total where the table above accounts for
+  29 rows (30 distinct models once the combined Muse Spark row is split), so
+  treat M2.5 as a still-reachable legacy option rather than a headline pick.
+  DeepSeek prices split into **Peak** (01:00–04:00 and 06:00–10:00 UTC, Mon–Fri)
+  and **Off-Peak** (all other hours, including weekends) token rates; the request
+  estimates above use typical mixed usage.
+
+  **Independently reconfirmed 2026-09-23:** every req/5h figure and monthly cap
+  spot-checked against a direct re-fetch of `opencode.ai/docs/go` matched
+  exactly (Muse Spark 45,300 · GLM-5.3-Flash 6,320/$60 · DeepSeek V4.1 Flash
+  promo 26,000/$60 ending Sep 27 · Kimi K3 110/$15 · Grok 4.7/4.6 169/$15 ·
+  GPT 5.6 Luna 2,050/$15, etc. — see §15.3 for the full check). MiniMax M2.5's
+  absence from the "current list of models" bullet and from the privacy table,
+  while still present in the token-price and endpoints tables, was also
+  reproduced independently.
 
 - **Abuse monitoring / client requirements:** send coding-agent-style traffic,
   identify with your own user agent, and send a stable session ID in
@@ -257,6 +298,13 @@ specific agents and workflows.
 > command and are no longer installed side by side by default. Remove a
 > package-managed V1 installation before installing V2; the V2 curl installer
 > replaces the V1 binary." Configuration and session-data locations are shared.
+> **Note (independent audit, 2026-09-23):** a live re-fetch of
+> `opencode.ai/v2/docs` confirms the installer still just calls the binary
+> `opencode` (no separate `opencode2` command), consistent with this claim. Be
+> aware some older cached/indexed copies of the same docs page (from earlier in
+> the v2 beta) described a distinct `opencode2` binary that *could* run
+> side-by-side with v1 — that appears to be a historical, now-superseded state
+> of the docs rather than the current one. See §15.4.
 
 ### Fedora
 
@@ -418,7 +466,7 @@ copy to `~/.config/opencode/`:
     "vision": {
       "mode": "subagent",
       "model": "opencode-go/deepseek-v4-flash-vision-exp",
-      "description": "Screenshot/UI-diff debugging, reading diagrams or error dialogs pasted as images, OCR-style extraction from PDFs rendered to PNG. The only vision-capable model in the Go lineup; 6,500 req/5h on a $15 cap, so route it only actual image-bearing turns."
+      "description": "Screenshot/UI-diff debugging, reading diagrams or error dialogs pasted as images, OCR-style extraction from PDFs rendered to PNG. Deliberately kept on the one model Go documents per-image-token billing for (§2/§13) — not necessarily the only model on Go that *can* take an image (see §13), but the one whose image handling is actually documented, so it's the safe default until you've verified another route yourself. 6,500 req/5h on a $15 cap, so route it only actual image-bearing turns."
     },
     "longread": {
       "mode": "subagent",
@@ -566,14 +614,95 @@ can override settings inline for one run. Full key list: `theme`, `animations`,
 `cursor`, `mouse`, `scroll`, `prompt`, `session`, `tabs`, `diffs`, `alerts`,
 `terminal`, `mini`, `keybinds`, `leader`, `plugins`, `debug`, `experimental`.
 
+**Which file governs which client:** `opencode.jsonc` (§5) is read by the shared
+background service (§1) — TUI, Desktop and Web are all clients of that one
+service, so every model/agent/permission/MCP/compaction setting in it, including
+every cost-minimization choice in §6/§7, applies identically no matter which
+client you open. `cli.json` (§5.1) only affects the terminal client's own UI
+(mouse, scroll, theme, paste behavior) — Desktop and Web have their own
+UI-preference storage and aren't governed by it. There's no separate
+"desktop.json"/"web.json" to maintain: nothing UI-only in Desktop/Web draws on
+quota, so there's nothing cost-relevant to configure there beyond §5.
+
 ### 5.2 Project files
 
 - **`AGENTS.md`** (project root, committed): auto-loaded; nested `AGENTS.md` files
-  load as the agent explores that area. This folder's [AGENTS.md](AGENTS.md) is the
-  example. Global personal rules go in `~/.config/opencode/AGENTS.md` — keep them
-  short, since they ride along in every context window you pay for.
+  load as the agent explores that area. This folder's [AGENTS.md](AGENTS.md) (§5.3)
+  is the example. Global personal rules go in `~/.config/opencode/AGENTS.md` — keep
+  them short, since they ride along in every context window you pay for.
 - **`.opencode/`** in a project: `agents/`, `commands/`, `skills/`, `plugins/`
   (plural directory names).
+
+### 5.3 Project rules — `AGENTS.md`
+
+Read by every client (TUI, Desktop, Web) via the shared server (§1) — there's
+nothing client-specific to configure here. This folder's [AGENTS.md](AGENTS.md) is
+this exact content:
+
+```markdown
+# AGENTS.md
+
+Project-level agent rules for this repo — auto-loaded on every session
+regardless of client (TUI/Desktop/Web) or which agent picks it up. Nested
+AGENTS.md files in subfolders load as the agent explores that area; keep this
+top-level file short, since it rides along in every context window you pay for.
+
+## Stack & commands
+- Install deps: `<fill in — e.g. npm ci / uv sync / bundle install>`
+- Lint: `<fill in>` (formatter:true in opencode.jsonc already auto-fixes most
+  style issues via ruff/prettier/gofmt — this is only for what it can't)
+- Typecheck: `<fill in>`
+- Test: `<fill in>` — also what `/test` (§5) runs by default
+
+## Conventions
+- Match existing file/module layout; don't introduce a new pattern for something
+  the codebase already does one way.
+- Prefer the smallest diff that correctly does the job.
+- Don't add new dependencies without calling it out in the response.
+
+## Cost-minimization reminders (see §6/§7 for the full playbook)
+- Stay on the default `build` agent for normal work; it's on a big-bucket model.
+- Escalate to `architect` only for genuinely hard multi-file/architecture work —
+  it's the smallest bucket in the lineup.
+- Route screenshots, diagrams or rendered PDF pages through the `vision`
+  subagent explicitly; the default agent's model can't see images (see §1/§9).
+- Long logs/configs/docs go through `longread` first, not straight into `build`.
+```
+
+### 5.4 Optional-layer secrets — `.env.example`
+
+Only for the optional layers (websearch providers, non-OpenCode clients like
+Continue, §9.1); OpenCode's own Go/Copilot/ChatGPT logins are handled by
+`opencode auth login` / `/connect` and stored in its credential DB (§1.1), not in
+any `.env` file. Copy to `.env` (already covered by [`.gitignore`](#12-what-lives-in-this-folder),
+§12) and fill in only what you actually use — this folder's
+[.env.example](.env.example) is this exact content:
+
+```bash
+# Copy to .env (already listed in .gitignore, §12) and fill in only what you use.
+# OpenCode's own Go/Copilot/ChatGPT logins live in its credential DB (§1.1) —
+# nothing below is required for OpenCode itself to run.
+
+# ---- Websearch provider (opencode.jsonc: "websearch": { "provider": "random" }) ----
+# Only ONE is required to make the websearch tool work at all; set more than one
+# and "random" (§1/§8) will retry across them on a 429 instead of failing the turn.
+EXA_API_KEY=
+FIRECRAWL_API_KEY=
+PARALLEL_API_KEY=
+TAVILY_API_KEY=
+
+# ---- Third-party OpenAI-compatible clients only (Continue, §9.1) ----
+# OpenCode's own TUI/Desktop/Web clients authenticate via `/connect`, not this
+# var. Set this only if you're pointing something outside OpenCode (Continue,
+# a script, etc.) at https://opencode.ai/zen/go/v1 directly.
+OPENCODE_GO_API_KEY=
+
+# ---- paper-search-mcp (§8), optional per-source keys ----
+# The server itself reads these from ~/.config/paper-search-mcp/.env, not this
+# file — listed here only as a reminder of what exists.
+# SEMANTIC_SCHOLAR_API_KEY=
+# CORE_API_KEY=
+```
 
 ---
 
@@ -623,9 +752,14 @@ can override settings inline for one run. Full key list: `theme`, `animations`,
   - `architect` (`kimi-k3`) — the one agent that should feel "expensive":
     tricky multi-file bugs, architecture decisions, anything where being wrong
     costs more than the $15-cap bucket it burns.
-  - `vision` (`deepseek-v4-flash-vision-exp`) — the only image-capable model in
-    Go; invoke it specifically when a screenshot, diagram or rendered PDF page
-    is part of the task, not for ordinary text turns.
+  - `vision` (`deepseek-v4-flash-vision-exp`) — the one model Go documents
+    per-image-token billing for (§2/§13); invoke it specifically when a
+    screenshot, diagram or rendered PDF page is part of the task, not for
+    ordinary text turns. It's the safe default, not necessarily the *only*
+    image-capable route on Go — `quickfix`'s own model (`glm-5.3-flash`) is
+    catalog-tagged for image input too, per §13 — but that isn't independently
+    verified as working through the Go backend specifically, so this guide
+    still routes images through `vision` until someone confirms otherwise.
   - `longread` (`longcat-2.0`) — pre-digesting large logs/configs/docs into a
     short brief before handing that brief to a reasoning model, so the
     expensive model never has to read the raw firehose itself.
@@ -701,9 +835,10 @@ within a session and the models from §2's full table:
    $60 cap) or, when the source is peak-hour DeepSeek pricing sensitive,
    `deepseek-v4-flash` (13,000 req/5h, $30 cap; note the Peak/Off-Peak split in
    §2). Route figures, plots or scanned/rendered pages through
-   `deepseek-v4-flash-vision-exp` (6,500 req/5h, $15 cap) — it's the only
-   vision-capable model in Go, so anything with a chart or a screenshot has to go
-   through it specifically rather than a text-only flash model.
+   `deepseek-v4-flash-vision-exp` (6,500 req/5h, $15 cap) — it's the model Go
+   documents image-token billing for (§2/§13), so it's the dependable choice for
+   anything with a chart or a screenshot, even though it may not be the literal
+   only model on Go whose underlying catalog entry accepts images (§13).
 4. **Default synthesis** — turning triaged notes into a structured brief with
    citations — `glm-5.2` (880 req/5h, $60 cap). This is what the `research`
    subagent in §5 runs by default; the $60 cap means you can synthesize several
@@ -781,6 +916,59 @@ only for the final pass.
   Note the Go API serves **chat**-style traffic; inline FIM completions want a small
   local model or a completion-oriented provider regardless.
 
+  ### 9.1 Continue + your Go API key (yes, but read this first)
+
+  Because the Go endpoint is **OpenAI-compatible**
+  (`https://opencode.ai/zen/go/v1`, §2), Continue's `openai`-provider block will
+  talk to it with just a base URL and the key you copied from the Console —
+  no OpenCode install required for that VS Code window. `~/.continue/config.yaml`:
+
+  ```yaml
+  name: opencode-go
+  version: 0.0.1
+  schema: v1
+  models:
+    - name: Go chat — GLM-5.3-Flash
+      provider: openai
+      model: glm-5.3-flash
+      apiBase: https://opencode.ai/zen/go/v1
+      apiKey: ${{ secrets.OPENCODE_GO_API_KEY }}
+      roles: [chat, edit]
+    - name: Go autocomplete — MiMo-V2.6-Flash (biggest bucket, §2)
+      provider: openai
+      model: mimo-v2.6-flash
+      apiBase: https://opencode.ai/zen/go/v1
+      apiKey: ${{ secrets.OPENCODE_GO_API_KEY }}
+      roles: [autocomplete]
+  ```
+
+  Three things this setup does **not** give you, so it's a different trade-off from
+  running OpenCode itself, not a strict subset:
+
+  1. **No abuse-monitoring identification.** §2 says Go expects coding-agent
+     traffic with a stable `x-opencode-session` header and a recognizable user
+     agent — OpenCode's own clients send this natively; Continue doesn't, and Go's
+     own docs already flag one non-native client (Copilot Chat, for the same
+     missing-header reason, [vscode#334186](https://github.com/microsoft/vscode/issues/334186))
+     as "known problematic." Continue isn't on that list, but it isn't on the
+     *verified* list either (Hermes, Claude Code, Codex, ZCode, Pi, jcode, Kilo
+     Code CLI, §2) — expect the same class of risk, not a guarantee either way.
+  2. **Autocomplete quality is a real caveat, not a formality.** The line right
+     above this section exists for a reason: Go serves chat-style traffic, and
+     `roles: [autocomplete]` wants low-latency FIM completions. It'll work, but a
+     completion-oriented provider or a local Tabby/llama.cpp model will likely
+     feel snappier for that specific role.
+  3. **You lose everything that isn't the raw model call** — agents, the
+     permissions guardrails (§5), skills, subagents, `/review` and `/plan-feature`,
+     compaction, worktrees. Continue only ever talks to the model; OpenCode's
+     quota-stretching tricks in §6/§7 (agent-per-scenario routing, cached-session
+     reuse, single-call subagents) don't apply because there's no OpenCode server
+     in the loop at all.
+
+  In short: it works as a way to spend the *same* Go dollars from a second client,
+  but it's a separate, thinner integration — not an alternative front-end onto the
+  same OpenCode session/agent/permission stack described in the rest of this guide.
+
 ---
 
 ## 10. NanoClaw integration
@@ -851,10 +1039,10 @@ context upfront, so a big skills folder doesn't tax everyday token usage.
 
 ```
 README.md            this guide (v2-only, verified Sep 2026)
-AGENTS.md            project-level agent rules (auto-loaded in this folder)
+AGENTS.md            project-level agent rules (§5.3, auto-loaded in this folder)
 opencode.jsonc       the global config from §5 — copy to ~/.config/opencode/
 cli.json             terminal settings from §5.1 — copy to ~/.config/opencode/
-.env.example         env vars for the optional layers (websearch provider keys, etc.)
+.env.example         env vars for the optional layers (§5.4: websearch keys, etc.)
 .gitignore           keeps .env, caches, and test artifacts out of git
 .zcodeignore         auto-synced mirror of .gitignore for the ZCode workspace
 ```
@@ -883,10 +1071,40 @@ draft's claims) on **2026-09-23**:
   that page — this closes out gaps a previous pass had marked "—" (not
   independently verified) for models like LongCat-2.0, Qwen3.7/3.8 Flash/Max,
   MiniMax M2.7/M3, MiMo-Pro variants, GLM-5.2/5.1, Grok 4.7/4.6, Qwen3.7 Max and
-  GPT 5.6 Luna. **MiniMax M2.5** appears in the endpoints/privacy tables but not
-  the usage-limits or estimated-requests tables — treat it as legacy. The
+  GPT 5.6 Luna. **MiniMax M2.5** appears only in the **Endpoints** table now (not
+  in "current list of models," usage-limits, estimated-requests, *or* Privacy) —
+  a same-day re-fetch during this revision found it had already dropped out of
+  the Privacy table since an earlier pass noted it there, so treat it as legacy
+  and don't rely on this guide's privacy claims for it specifically. The
   **DeepSeek V4.1 Flash 4× promo and its Sep 27, 2026 end date** are stated
   verbatim on the live pricing table, not a rumor.
+- **"Only vision-capable model" claim — corrected, not just re-checked.** An
+  earlier pass in this revision re-fetched the live Go docs and concluded
+  `deepseek-v4-flash-vision-exp` was still the only vision-capable model in the
+  lineup. **That was wrong**, caught by a reader's own screenshot of the model
+  picker showing GLM-5.3-Flash's capability icons expanding, on hover, to
+  include an image tag. Checking further: OpenCode's model picker/console draws
+  its capability icons from the same live Models.dev catalog OpenCode itself
+  fetches (§1) — it isn't the Go docs page. That catalog data (cross-checked via
+  a third-party Models.dev-sourced listing, `pi.dev/models/opencode-go/*`) shows
+  `opencode-go/glm-5.3-flash` declared with `"input": ["text", "image"]`, while
+  e.g. `hy3` and `hy4-preview` are declared `"input": ["text"]` only — so image
+  tagging in the catalog is real, model-specific data, not a UI default. What
+  the Go docs page actually documents is narrower and shouldn't have been read
+  as "the only model that takes images": it calls out per-image-token billing
+  for `deepseek-v4-flash-vision-exp` specifically and says nothing about image
+  billing for any other model, which is a documentation gap, not evidence of
+  incapability elsewhere. Complicating this further, a reported issue
+  ([lidge-jun/opencodex#4505](https://github.com/lidge-jun/opencodex/issues/4505))
+  describes the Go backend maintaining its own `noVisionModels` denylist that
+  overrides the catalog's declared image support for at least
+  `deepseek-v4.1-flash` — so catalog-tagged image support and actual Go-backend
+  image handling can diverge in the other direction too. Net effect: this guide
+  no longer claims Vision Exp is the only image-capable model on Go (§1/§5/§7/§8
+  corrected above), but it also doesn't claim GLM-5.3-Flash's image input is
+  confirmed working through the Go endpoint specifically — that needs a real
+  test send, not just a catalog icon or a docs page, before you'd rely on it for
+  anything that has to work.
 - **v2 product surface** — refetched <https://opencode.ai/v2/docs> directly: the
   intro page confirms the shared install flow (`curl .../v2/install`, `npm i -g
   @opencode/cli`, etc.), Desktop/Web/Docker instructions, and that OpenCode Go is
@@ -912,6 +1130,17 @@ draft's claims) on **2026-09-23**:
   discrepancy could reflect a lagging CDN cache on the docs page, a beta/dev
   channel AUR build running ahead of the stable download page, or simply that both
   pages had moved on again by the time you're reading this.
+  **Independently reconfirmed 2026-09-23:** a direct re-fetch of
+  `opencode.ai/v2/docs` still resolves every CLI and Desktop binary link to
+  build **2.0.6** — this is real and reproducible, not a one-off cache glitch.
+  That same intro page, however, *does* list a full platform matrix straight
+  from `/v2/docs` itself (macOS AS/Intel, Windows x64 **and** ARM64, Linux
+  glibc/musl x64/ARM64, and Desktop builds including Linux **AppImage** for
+  both x64 and ARM64) — so if `opencode.ai/download` is genuinely narrower, as
+  this guide's fetch found, that's an inconsistency *between two of Anomaly's
+  own pages*, not just a stale draft in this guide. Practical takeaway: for any
+  platform `opencode.ai/download` seems to be missing, check
+  `opencode.ai/v2/docs` before concluding the build doesn't exist. See §15.2.
 - **Open issues used as caveats** — #48330 (Copilot legacy-plan request drain),
   #49847 (ChatGPT-OAuth requests sent with the Zen key), #46365 (usage accounting
   discrepancy), microsoft/vscode#334186 (missing session header) — these were
@@ -980,4 +1209,89 @@ per request, all Pydantic/LangGraph content has been stripped from this guide.
   [Google Calendar MCP](https://developers.google.com/workspace/calendar/api/guides/configure-mcp-server) ·
   [Zed edit predictions](https://zed.dev/docs/ai/edit-prediction) ·
   [Tabby](https://github.com/TabbyML/tabby)
+
+---
+
+## 15. Independent audit findings (external pass, 2026-09-23)
+
+This section documents a second, independent verification pass done from
+outside this guide's own authorship — re-fetching Anomaly's live pages rather
+than trusting this guide's earlier self-reported citations. It confirms most of
+the guide's numbers, finds the guide's own flagged uncertainties are real, and
+surfaces a couple of things worth tightening.
+
+### 15.1 Pricing: a genuine inconsistency on Anomaly's own pages, not this guide
+
+The two pages fetched live this pass disagree with each other:
+
+- `opencode.ai/go` and `opencode.ai/v2/docs` (both re-fetched directly) state a
+  flat **"$10/month"** with no introductory-price language — this is what this
+  guide's headline `$10/mo` reflects.
+- `opencode.ai/docs/go` (the detailed Go page, and several of its localized
+  variants) states **"$5 for your first month, then $10/month."**
+
+Since Anomaly's own landing page and detailed docs page don't agree, this
+guide's flat "$10/mo" isn't wrong, but it also isn't the complete picture for a
+first-time subscriber — worth a one-line mention that a first-month discount
+may apply depending on which sign-up path is used.
+
+### 15.2 Version numbers: confirmed real, not a one-off
+
+Directly re-fetching `opencode.ai/v2/docs` reproduced the exact discrepancy
+this guide flagged: every CLI and Desktop download link on that page currently
+resolves to build **2.0.6**. This guide's decision to stop asserting "2.0.14"
+in its own title is the right call — `opencode --version` remains the only
+reliable source for the number actually running on a given machine.
+Separately, that same intro page turned out to list a **fuller** platform
+matrix (Windows ARM64, Linux AppImage for both x64/ARM64, ARM64 `.deb`/`.rpm`)
+than this guide's fetch of `opencode.ai/download` found — see the note added at
+§3.
+
+### 15.3 Go model table: spot-checked and accurate
+
+A line-by-line spot-check of roughly 15 rows in this guide's §2 pricing/request
+table against a fresh fetch of `opencode.ai/docs/go` found **no numeric
+discrepancies** — request-per-5-hour estimates, monthly caps, and the DeepSeek
+V4.1 Flash promotional 4× figures (26,000 req/5h, $60 cap, ending Sep 27, 2026)
+all matched exactly. The "current list of models" bullet on the live docs page
+has **30** entries (this guide's 29-row table accounts for all of them once the
+combined Muse Spark 1.3/1.2 row is split into two), and **MiniMax M2.5** is
+confirmed present in the token-price and endpoints tables but genuinely absent
+from both the "current list of models" bullet *and* the privacy table — this
+guide's original wording ("still live on the endpoints/privacy pages") overstated
+that slightly, since M2.5 isn't actually on the privacy page; corrected at §2.
+
+### 15.4 v1/v2 coexistence: current docs support this guide, older cached copies don't
+
+This guide's central framing — that v1 and v2 share the `opencode` command and
+aren't installed side-by-side — matches a direct, live re-fetch of
+`opencode.ai/v2/docs` today. However, an older indexed/cached snapshot of what
+appears to be the same docs page (surfaced via general web search rather than a
+direct fetch) described OpenCode 2 running as a separate `opencode2` binary
+installable alongside v1. This is very likely just an artifact of the docs
+having been rewritten as v2 moved from early beta toward its current state, but
+it's a good illustration of why this guide is right to keep insisting on
+re-checking the *live* pages rather than trusting any single snapshot — this
+one included.
+
+### 15.5 Citations spot-checked as genuine
+
+`microsoft/vscode#334186`, cited by this guide as an open request for automatic
+session-header support in GitHub Copilot Chat, is in fact cited for exactly
+that purpose directly in Anomaly's own live `opencode.ai/docs/go` page (in its
+"Known Problematic Clients" table) — this is a real, correctly-used citation,
+not a fabricated one. The underlying repository `anomalyco/opencode` was
+confirmed to be a real, actively developed project with a high commit/PR
+volume consistent with this guide's "moves fast" framing.
+
+### 15.6 Not independently re-verified in this pass
+
+In the time available, this pass did **not** independently re-open: the
+GitHub issue numbers cited for the Copilot request-drain, ChatGPT/Zen-key, and
+usage-accounting bugs (`#48330`, `#49847`, `#46365`); the `lidge-jun/opencodex`
+vision-denylist issue; the AUR package pages; the Console/budgets API
+endpoints; or anything under this guide's own "Ecosystem" list. Treat those the
+same way this guide already asks you to — as carried-over claims worth
+re-checking yourself against the live source before relying on them, not as
+newly confirmed by this pass.
 
