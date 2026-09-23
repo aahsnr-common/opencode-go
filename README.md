@@ -1,23 +1,29 @@
-# OpenCode v2 + OpenCode Go — Ultimate Setup Guide (v2.0.14)
+# OpenCode v2 + OpenCode Go — Ultimate Setup Guide
 
-A single, opinionated setup for running **OpenCode v2** (verified against **2.0.14**,
-September 2026) on an **OpenCode Go** subscription ($10/mo) — tuned to stretch the
-quota, with agent/permission guardrails, optional validated MCP tooling
-(Pydantic + LangGraph), deep-research plumbing, IDE/GUI integration and
-productivity MCP servers.
+A single, opinionated setup for running **OpenCode v2** on an **OpenCode Go**
+subscription ($10/mo) — tuned to stretch the quota across all ~29 models Go
+currently offers, with agent/permission guardrails, model choices for specific
+work scenarios, deep-research plumbing, IDE/GUI integration and productivity MCP
+servers.
 
 Everything here is **v2-only**; the LiteLLM governance layer that used to live in
 this folder has been removed (Go already meters in dollars, and a self-hosted
-proxy adds latency and risks breaking prompt caching). **Coming from v1?** Jump to
-**§4 — Migrating from v1 to v2**; v1 and v2 are no longer installed side by side.
+proxy adds latency and risks breaking prompt caching). The Pydantic/LangGraph MCP
+servers that used to live in this folder have also been removed (see §12 for what
+that means for this folder's file list) — they added real quota/context cost for
+a job a single strong-model subagent does more cheaply (§6, §7). **Coming from
+v1?** Jump to **§4 — Migrating from v1 to v2**; v1 and v2 are no longer installed
+side by side.
 
 > OpenCode moves fast. Model lists, caps and config keys change. The pages under
 > <https://opencode.ai/v2/docs> and <https://opencode.ai/docs/go> are authoritative;
-> re-check them and `/models` before trusting exact IDs or caps.
+> re-check them and `/models` before trusting exact IDs or caps. This revision was
+> audited against those pages on **2026-09-23** (see §13/§14); the Go docs page
+> itself is stamped "Last updated: Sep 22, 2026."
 
 ---
 
-## 1. What OpenCode v2 gives you (stock, verified on 2.0.14)
+## 1. What OpenCode v2 gives you (stock; see §13 for a version-number caveat)
 
 - **Client/server with a shared background service.** One server per user owns
   sessions, config, credentials, permissions and tool execution; TUI, desktop and
@@ -176,36 +182,51 @@ From [opencode.ai/docs/go](https://opencode.ai/docs/go) and the v2 console docs 
   of documented per-model caps. Watch your Console early in a month before relying
   on the full bucket.
 
-- **Estimates (per the docs table, Sep 2026)** — these move; the docs are
-  authoritative. "req/5h" = docs' estimated requests per 5-hour window; caps are
-  the per-model monthly dollar limits (those marked ✔ were confirmed against
-  Console reports in Aug–Sep 2026; "—" = not independently re-verified):
+- **Full lineup, fetched directly from <https://opencode.ai/docs/go/> on
+  2026-09-23** (page stamped "Last updated: Sep 22, 2026") — every cap below is
+  read straight off the docs' usage-limits table, not estimated or
+  cross-referenced against a third party. "req/5h" is the docs' own estimated-
+  request figure for that window:
 
-  | Model group (as the docs group them) | Est. req / 5h | Monthly cap |
-  |---|---|---|
-  | Muse Spark 1.3 / 1.2 Contributor ⚠ trains on prompts, region-limited | 45,300 | ✔ $60 |
-  | MiMo-V2.6-Flash, MiMo-V2.5 | 30,100 | ✔ $60 (V2.5) |
-  | DeepSeek V4 Flash | 13,000 | ✔ $30 |
-  | LongCat-2.0 | 11,400 | — |
-  | DeepSeek V4.1 Flash | 6,500 (promo row lists 26,000 — check) | promo reported 4×, ends Sep 27, 2026 |
-  | DeepSeek V4 Flash Vision Exp | 6,500 | ✔ $15 |
-  | GLM-5.3-Flash | 6,320 | ✔ $30 (Aug) |
-  | Qwen3.8 Flash | 5,400 | — |
-  | Qwen3.7 Plus, Hy3 | 4,300 | — |
-  | MiniMax M2.7 / M3 | 3,400 / 3,200 | — |
-  | Qwen3.6 Plus | 3,300 | — |
-  | MiMo-V2.5-Pro, MiMo-V2.6-Pro | 3,250 | — |
-  | GPT 5.6 Luna (30-day abuse logs) | 2,050 | — |
-  | Kimi K2.7 Code | 1,350 | ✔ $60 |
-  | Hy4 preview | 1,350 | ✔ $30 |
-  | Kimi K2.6 | 1,150 | — |
-  | DeepSeek V4 Pro | 1,050 | ✔ $15 |
-  | GLM-5.2, GLM-5.1 | 880 | ✔ $60 (5.2) |
-  | GLM-5.3 | 220 | ✔ $15 |
-  | Qwen3.7 Max | 170 | — |
-  | Grok 4.7, Grok 4.6 (30-day logs, ZDR limits features) | 169 | — |
-  | Qwen3.8 Max | 160 | — |
-  | Kimi K3 | 110 | ✔ $15 |
+  | Model | Est. req / 5h | Monthly cap | Notes |
+  |---|---|---|---|
+  | Muse Spark 1.3 / 1.2 Contributor | 45,300 | $60 | ⚠ trains on prompts, [region-limited](https://ai.developer.meta.com/legal/geographic-use-policy) |
+  | MiMo-V2.6-Flash | 30,100 | $60 | |
+  | MiMo-V2.5 | 30,100 | $60 | older sibling of V2.6-Flash, same price/limit |
+  | LongCat-2.0 | 11,400 | $60 | |
+  | DeepSeek V4.1 Flash | ~~6,500~~ **26,000** | ~~$15~~ **$60** | 4× promo, ends **Sep 27, 2026** — reverts to $15/6,500 after |
+  | DeepSeek V4 Flash | 13,000 | $30 | |
+  | DeepSeek V4 Flash Vision Exp | 6,500 | $15 | vision-capable |
+  | GLM-5.3-Flash | 6,320 | $60 | |
+  | Qwen3.8 Flash | 5,400 | $30 | |
+  | Qwen3.7 Plus | 4,300 | $60 | |
+  | Hy3 | 4,300 | $60 | |
+  | MiniMax M2.7 | 3,400 | $60 | |
+  | MiniMax M3 | 3,200 | $60 | |
+  | Qwen3.6 Plus | 3,300 | $60 | |
+  | MiMo-V2.6-Pro | 3,250 | $15 | |
+  | MiMo-V2.5-Pro | 3,250 | $15 | |
+  | GPT 5.6 Luna | 2,050 | $15 | 30-day abuse-monitoring retention |
+  | Kimi K2.7 Code | 1,350 | $60 | |
+  | Hy4 preview | 1,350 | $30 | |
+  | Kimi K2.6 | 1,150 | $60 | |
+  | DeepSeek V4 Pro | 1,050 | $15 | |
+  | GLM-5.2 | 880 | $60 | |
+  | GLM-5.1 | 880 | $60 | |
+  | GLM-5.3 | 220 | $15 | newest/strongest GLM, smallest bucket |
+  | Qwen3.7 Max | 170 | $30 | |
+  | Grok 4.7 | 169 | $15 | 30-day retention; ZDR disables Responses/Files/Batch |
+  | Grok 4.6 | 169 | $15 | same caveats as 4.7 |
+  | Qwen3.8 Max | 160 | $15 | |
+  | Kimi K3 | 110 | $15 | flagship reasoning model, priciest bucket |
+
+  Not in the usage/estimate tables but still live on the endpoints/privacy pages:
+  **MiniMax M2.5** (legacy sibling of M2.7, Anthropic-compatible endpoint, 0-day
+  retention) — the Go landing page counts **30 models** total where the table
+  above accounts for 29, so treat M2.5 as a still-reachable legacy option rather
+  than a headline pick. DeepSeek prices split into **Peak** (01:00–04:00 and
+  06:00–10:00 UTC, Mon–Fri) and **Off-Peak** (all other hours, including
+  weekends) token rates; the request estimates above use typical mixed usage.
 
 - **Abuse monitoring / client requirements:** send coding-agent-style traffic,
   identify with your own user agent, and send a stable session ID in
@@ -221,8 +242,12 @@ From [opencode.ai/docs/go](https://opencode.ai/docs/go) and the v2 console docs 
   GPT 5.6 Luna retain 30 days**; **Muse Spark Contributors train on your prompts**
   (and are region-limited); DeepSeek's ZDR agreement was valid through Sep 30, 2026.
 
-**The lever that matters:** put flash-tier models on the big buckets and reserve the
-$15-cap premium models for hard planning/review steps.
+**The lever that matters:** put flash-tier models on the big buckets ($60-cap,
+thousands of req/5h) and reserve the $15-cap models (Kimi K3, GLM-5.3, Qwen3.8
+Max, Grok 4.7/4.6, DeepSeek V4 Pro, GPT 5.6 Luna) for the handful of steps per
+day that actually need frontier reasoning — hard architecture calls, security-
+sensitive diffs, and final review gates. See §6/§7/§8 for how this maps onto
+specific agents and workflows.
 
 ---
 
@@ -243,27 +268,40 @@ curl -fsSL https://opencode.ai/v2/install | bash
 # or: yarn global add @opencode/cli
 ```
 
-Standalone CLI binaries are also published for Linux glibc/musl (x64/ARM64) on the
-download page. (Windows package managers are not supported; use the standalone
-binary.)
+Standalone CLI binaries are published for macOS, Windows and Linux (glibc/musl,
+x64/ARM64) directly off the v2 docs intro page — as of this pass (2026-09-23) that
+page's links resolve to build **2.0.6**, not 2.0.14 (see §13). Confirm your
+installed version with `opencode --version` rather than trusting a specific
+number in this guide. (Windows package managers are not supported; use the
+standalone binary.)
 
 ### Arch Linux
 
 ```bash
-# AUR — opencode-beta 2.0.14-1 (Sep 22, 2026), conflicts with opencode/opencode2
 paru -S opencode-beta
 # or: yay -S opencode-beta
 # or via the Homebrew tap: brew install anomalyco/tap/opencode-v2
 ```
 
+`opencode-beta` conflicts with `opencode`/`opencode2`. This pass did **not**
+re-open the AUR package page to confirm its current version pin — check
+<https://aur.archlinux.org/packages/opencode-beta> directly before assuming any
+specific build number.
+
 ### Desktop (v2 is available)
 
-- **Direct downloads** (<https://opencode.ai/download>): macOS (Apple silicon /
-  Intel), Windows (x64 / ARM64), Linux `.deb` / `.rpm` / AppImage (x64 / ARM64).
-- **Arch:** `paru -S opencode-desktop-bin` (**2.0.14-1**, builds the upstream
-  `opencode-desktop-2.0.14-linux-*.deb`; conflicts with `opencode-desktop`).
-- **Homebrew:** the `opencode-desktop` cask still tracked **1.18.32** at audit time
-  (Sep 23, 2026) — prefer the download page or AUR until the cask catches up.
+- **Direct downloads** (<https://opencode.ai/download>, refetched this pass):
+  macOS (Apple Silicon / Intel), Windows (**x64 only** in this pass's fetch — no
+  ARM64 link was present), Linux `.deb` / `.rpm` (**no AppImage link** was present
+  in this pass's fetch, and no ARM64 variant for either package format). If you
+  need Windows ARM64, a Linux AppImage, or ARM64 `.deb`/`.rpm`, check the download
+  page yourself — an earlier draft of this guide claimed all of those existed and
+  this pass could not confirm they still do.
+- **Arch:** `paru -S opencode-desktop-bin` (conflicts with `opencode-desktop`) —
+  version not re-verified this pass.
+- **Homebrew:** `brew install --cask opencode-desktop` is listed directly on the
+  download page now; whether the cask has caught up to the current stable Desktop
+  build was not re-checked this pass.
 
 ### Web UI (same config, password-protected)
 
@@ -355,25 +393,42 @@ copy to `~/.config/opencode/`:
   "update": "notify",
 
   // ---- Agents (v2: "agents" — v1's "agent" + small_model are gone) ---
+  // Each agent's model is picked for its scenario, not just its price — see §6/§7
+  // for the full reasoning behind every assignment below.
   "agents": {
     "plan": {
       "mode": "primary",
       "model": "opencode-go/glm-5.2",
-      "description": "Read-only planning/analysis; the shipped plan agent denies edits."
+      "description": "Read-only planning/analysis; the shipped plan agent denies edits. GLM-5.2 gives solid multi-step reasoning at a $60 monthly cap (880 req/5h) — cheap enough to plan freely, unlike the $15-cap models."
     },
     "architect": {
       "mode": "primary",
       "model": "opencode-go/kimi-k3",
-      "description": "Hard architecture + multi-file debugging; short, targeted sessions.",
+      "description": "Hard architecture + multi-file debugging; short, targeted sessions only. Kimi K3 is Go's strongest reasoning model but sits on the smallest bucket (110 req/5h, $15 cap) — reserve it for the few sessions/day that actually need frontier-level tracing across files.",
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "ask" },
         { "action": "shell", "resource": "*", "effect": "ask" }
       ]
     },
+    "quickfix": {
+      "mode": "primary",
+      "model": "opencode-go/glm-5.3-flash",
+      "description": "Everyday small edits, typo/lint fixes, boilerplate, one-file changes. GLM-5.3-Flash (6,320 req/5h, $60 cap) is a meaningfully stronger flash tier than mimo-v2.6-flash for a modest cost, so it's the pick when you want more than pure autocomplete-grade output but don't need architect-level reasoning."
+    },
+    "vision": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash-vision-exp",
+      "description": "Screenshot/UI-diff debugging, reading diagrams or error dialogs pasted as images, OCR-style extraction from PDFs rendered to PNG. The only vision-capable model in the Go lineup; 6,500 req/5h on a $15 cap, so route it only actual image-bearing turns."
+    },
+    "longread": {
+      "mode": "subagent",
+      "model": "opencode-go/longcat-2.0",
+      "description": "Paging through large logs, long AGENTS.md trees, big config dumps, or long documents before handing a distilled summary back to a reasoning model. 11,400 req/5h on a $60 cap — built for volume, not depth."
+    },
     "research": {
       "mode": "subagent",
       "model": "opencode-go/glm-5.2",
-      "description": "Deep-dive web research: search, read, synthesize with citations.",
+      "description": "Deep-dive web research: search, read, synthesize with citations. See §8 for the full model ladder used across a research session (this is just the default/synthesis step).",
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "deny" },
         { "action": "websearch", "resource": "*", "effect": "allow" },
@@ -412,13 +467,13 @@ copy to `~/.config/opencode/`:
   // ---- Commands ---------------------------------------------------------
   "commands": {
     "review": {
-      "template": "Review the current working diff (`git diff`). Delegate to the code-review subagent (langgraph-agent MCP tool) and report its verdict and findings.",
-      "description": "LangGraph-powered code review of the working diff",
-      "agent": "build"
+      "template": "Review the current working diff (`git diff`) for correctness, security and style. Report a clear verdict (approve/changes-requested) with specific findings.",
+      "description": "Single-call code review of the working diff",
+      "agent": "architect"
     },
     "test": {
-      "template": "Use the project-ops subagent's run_tests tool to run the test suite for $ARGUMENTS and summarize any failures.",
-      "description": "Run tests via the Pydantic-validated pytest MCP tool",
+      "template": "Run the test suite for $ARGUMENTS using the project's normal test command (check AGENTS.md / package.json / pyproject.toml if unsure) and summarize any failures.",
+      "description": "Run tests via the built-in shell tool",
       "agent": "build"
     },
     "plan-feature": {
@@ -438,26 +493,11 @@ copy to `~/.config/opencode/`:
   // v2 nests servers under mcp.servers and uses `disabled` (not `enabled`).
   // Servers connect automatically unless disabled. A project-level override
   // REPLACES the whole server object, so repeat every required field there.
+  // This revision ships with no local MCP servers by default — see §11 for the
+  // productivity servers (GitHub, Notion, Linear, Google Calendar, Obsidian)
+  // and §8 for the research-oriented ones (paper-search).
   "mcp": {
-    "servers": {
-      "pydantic-tools": {
-        "type": "local",
-        "command": ["uv", "run", "/home/ahsan/Git/common/opencode-go/server.py"],
-        "disabled": true,
-        "timeout": { "startup": 15000 }
-      },
-      "langgraph-agent": {
-        "type": "local",
-        "command": ["uv", "run", "/home/ahsan/Git/common/opencode-go/mcp_server.py"],
-        "disabled": true,
-        "timeout": { "startup": 30000 },
-        "environment": {
-          "GRAPH_BASE_URL": "https://opencode.ai/zen/go/v1",
-          "GRAPH_API_KEY": "{env:OPENCODE_GO_API_KEY}",
-          "GRAPH_MODEL": "hy3"
-        }
-      }
-    }
+    "servers": {}
   },
 
   // ---- Token hygiene ----------------------------------------------------
@@ -540,9 +580,11 @@ can override settings inline for one run. Full key list: `theme`, `animations`,
 ## 6. Token & quota playbook
 
 1. **Tier the models; keep a big bucket as default.** `mimo-v2.6-flash`-class models
-   provide ~30,000 est. requests per 5 h vs ~110 for `kimi-k3` — a ~275× spread.
-   Every token that doesn't go through `glm-5.3` / `kimi-k3` / `qwen3.8-max`
-   ($15 caps) is headroom saved.
+   provide ~30,100 est. requests per 5 h vs ~110 for `kimi-k3` — a ~274× spread.
+   The full $15-cap ("spend sparingly") tier per §2 is: `kimi-k3`, `glm-5.3`,
+   `qwen3.8-max`, `grok-4.7`, `grok-4.6`, `deepseek-v4-pro`, `gpt-5.6-luna`,
+   `deepseek-v4-flash-vision-exp`, `mimo-v2.6-pro`, `mimo-v2.5-pro`. Every token
+   that doesn't need to go through one of those is headroom saved.
 2. **Keep context small.** Every session pays for the system prompt + tool schemas +
    AGENTS.md. Code Mode keeps MCP schemas out of context, so disable servers you
    don't need (`"disabled": true`) and gate skills with `permissions`.
@@ -559,17 +601,38 @@ can override settings inline for one run. Full key list: `theme`, `animations`,
 8. **Watch the needle.** Console for the big picture (per-model detail + reset
    timers); Usage API CSV export for accounting; Budgets API if you share the
    workspace.
-9. **Don't point an agent at the metered API as a proxy.** The LangGraph reviewer
-   makes 3 LLM calls per review; a single-call reviewer subagent does the same job
-   for ~⅓ the tokens. Use the MCP path only when you want the structured verdict.
+9. **Prefer single-call subagents over multi-step pipelines.** A multi-step
+   review/analysis pipeline that makes 3 separate LLM calls burns ~3× the quota of
+   one well-prompted subagent call that returns the same verdict in one shot
+   (see `/review` in §5, which is intentionally a single call). Reach for a
+   multi-step pipeline only when you need deterministic, inspectable state
+   between steps — not by default.
 
 ---
 
 ## 7. Optimizing for agentic programming
 
-- **Subagents for the expensive stuff.** `research` runs on its own (cheaper) model
-  with its own context window; `build`'s context stays small. Nesting depth is 1 by
-  default, so plan orchestration accordingly.
+- **Match the agent to the scenario, not just the price.** §5 now ships six
+  agents, each tuned to a distinct kind of work instead of one-size-fits-all:
+  - `build` (default, `mimo-v2.6-flash`) — the everyday driver for normal
+    feature work; huge bucket (30,100 req/5h), 0-day retention, no training.
+  - `quickfix` (`glm-5.3-flash`) — one-file edits, typos, boilerplate, lint
+    fixes; noticeably sharper than pure flash tiers for a small cost step-up.
+  - `plan` (`glm-5.2`, read-only) — scoping and design docs before code is
+    touched; generous $60 cap means you can iterate on a plan freely.
+  - `architect` (`kimi-k3`) — the one agent that should feel "expensive":
+    tricky multi-file bugs, architecture decisions, anything where being wrong
+    costs more than the $15-cap bucket it burns.
+  - `vision` (`deepseek-v4-flash-vision-exp`) — the only image-capable model in
+    Go; invoke it specifically when a screenshot, diagram or rendered PDF page
+    is part of the task, not for ordinary text turns.
+  - `longread` (`longcat-2.0`) — pre-digesting large logs/configs/docs into a
+    short brief before handing that brief to a reasoning model, so the
+    expensive model never has to read the raw firehose itself.
+- **Subagents for the expensive stuff.** `research`, `vision` and `longread` all
+  run on their own (task-appropriate) model with their own context window, so
+  `build`'s context stays small. Nesting depth is 1 by default, so plan
+  orchestration accordingly — a subagent can't itself spawn nested subagents.
 - **Commands encode workflows** (§5) so every project gets `/plan-feature`,
   `/review`, `/test`, `/research`.
 - **Permissions as guardrails, not brakes.** The array in §5 keeps read-only git
@@ -586,90 +649,7 @@ can override settings inline for one run. Full key list: `theme`, `animations`,
 
 ---
 
-## 8. Optional: Pydantic + LangGraph MCP servers (this folder, no LiteLLM)
-
-The LangGraph review pipeline (`graph.py` + `mcp_server.py`) and the
-Pydantic-validated project-ops tools (`server.py`) still work — **with two fixes
-applied in this revision**:
-
-1. **Pin the MCP SDK to 1.x.** `pip install mcp` now resolves to **2.x**, which
-   removed `mcp.server.fastmcp` (2.x uses `from mcp.server import MCPServer`).
-   Both PEP 723 blocks now pin `"mcp[cli]>=1.30,<2"`; the 1.x branch (latest
-   1.30.0, Sep 7 2026) still receives critical fixes and security patches.
-2. **No LiteLLM hop.** `graph.py` now talks **directly to an OpenAI-compatible
-   endpoint** (default: OpenCode Go) via `GRAPH_BASE_URL` / `GRAPH_API_KEY` /
-   `GRAPH_MODEL`. Pick a model served on `/v1/chat/completions` (e.g. `hy3`,
-   `hy4-preview` in the docs' endpoint table) — models served only on the
-   Anthropic `/v1/messages` shape will not work through `ChatOpenAI`. Set
-   `OPENCODE_GO_API_KEY` (the same key `/connect` stored).
-
-Verified working in the audit: PEP 723 environments build; both servers import,
-initialize and shut down; `graph.py`'s Pydantic-state graph compiles and `ainvoke`
-returns a dict (so `CodeReviewResult(**result_state)` is safe) on langgraph 1.2.12 /
-langchain-openai 1.6.4 / pydantic 2.x.
-
-**Advantages / disadvantages:**
-
-- ✅ **Pydantic tools**: precise JSON Schemas; malformed calls fail fast with
-  validation errors; results arrive structured instead of prose. The same servers
-  are reusable from PydanticAI agents.
-- ✅ **LangGraph**: deterministic, inspectable multi-step flow with typed state; the
-  same graph runs locally or deploys to LangGraph Platform.
-- ❌ Extra moving parts and context cost: tool schemas permanently consume tokens
-  unless gated per-agent (they ship `disabled: true` here on purpose).
-- ❌ The reviewer costs **3 LLM calls per review** where one strong-model prompt does
-  the same job (~3× the quota).
-- ❌ `query_metrics` returns **fabricated placeholder data (42.0)** — keep it
-  disabled until you wire a real backend; a model will otherwise happily quote fake
-  metrics.
-- ❌ `run_tests` executes pytest in the MCP server's *ephemeral* environment — fine
-  for plain pytest, but a project needing its own deps will show false import
-  failures. Prefer the built-in shell tool for dependency-heavy suites.
-
-Rule of thumb: keep them if you value structure and validation; if you're optimizing
-purely for quota, a single-call reviewer subagent on `glm-5.2` is the leaner
-equivalent.
-
-### 8.1 First-party Pydantic & LangGraph integrations (you may not need custom code)
-
-**LangGraph — a deployed graph *is* an MCP server.** The LangGraph Agent Server
-behind LangSmith Deployments exposes every deployed graph as an MCP tool at a
-streamable-HTTP `/mcp` endpoint (`https://<deployment>.us.langgraph.app/mcp`;
-`langgraph dev` serves the same locally at `http://localhost:8124/mcp`). OpenCode
-connects directly — no wrapper script needed:
-
-```jsonc
-"mcp": {
-  "servers": {
-    "langgraph-cloud": {
-      "type": "remote",
-      "url": "{env:LANGGRAPH_DEPLOYMENT_URL}/mcp",
-      "disabled": true,
-      "headers": { "x-api-key": "{env:LANGSMITH_API_KEY}" }
-    }
-  }
-}
-```
-
-Caveats: each graph surfaces as **one** tool (tools inside the graph aren't
-individually exposed), and auth is your LangSmith API key. The reverse direction —
-a LangGraph agent consuming MCP servers as tools — is what
-[`langchain-mcp-adapters`](https://github.com/langchain-ai/langchain-mcp-adapters)
-is for.
-
-**PydanticAI — MCP in both directions** ([docs](https://pydantic.dev/docs/ai/mcp/overview/)).
-PydanticAI agents *consume* MCP servers via the `MCP` capability, the lower-level
-`MCPToolset` (`pydantic_ai.mcp`), or `MCPServerTool` for provider-native MCP — so a
-PydanticAI side-agent can reuse the exact same MCP servers you register in OpenCode.
-On the *serving* side, the standard way to expose an agent to OpenCode is a
-[FastMCP](https://gofastmcp.com) server wrapping the agent's tools with `@mcp.tool`
-— precisely the pattern `server.py`/`mcp_server.py` follow (Pydantic models in,
-Pydantic models out). Known limitation: MCP **tools only** — servers exposing just
-resources aren't usable from agents.
-
----
-
-## 9. Deep research setup for professional scientists
+## 8. Deep research setup for professional scientists
 
 **Web search first.** v2's `websearch` tool needs a provider: connect **Exa**,
 **Firecrawl**, **Parallel** or **Tavily** via `/connect`, or export the matching API
@@ -704,22 +684,47 @@ sessions, settings; Python 3.12+, run from a clone with `uv`). Keep it disabled
 until you actually need it.
 
 **Which model for search-heavy work?** The search *backend* is model-independent;
-the spend is model tokens, and search agents re-read context constantly, so
-**cached-read pricing dominates**. A cost-tiered ladder following §2:
+the spend is model tokens, and a research session re-reads the same growing
+context on every turn, so **cached-read pricing and bucket size dominate far more
+than raw model quality**. A five-stage ladder, mapped onto specific scenarios
+within a session and the models from §2's full table:
 
-- `glm-5.3-flash` — high-volume search-and-read passes
-- `mimo-v2.6-flash` — bulk cheap reading and note-taking
-- `glm-5.2` — default research/synthesis model
-- `kimi-k3` — final hard synthesis only (110 req/5h, $15 cap — burns fast)
-- DeepSeek V4 Flash — paging through long documents
+1. **Fan-out search-and-read** (dozens of queries, skim-level triage of what's
+   worth reading closely) — `glm-5.3-flash` (6,320 req/5h, $60 cap, $0.15/$0.50
+   per 1M tokens). This is the highest-volume step in any research session, so it
+   belongs on the cheapest capable model.
+2. **Bulk note-taking and light summarization** of the pages that clear triage —
+   `mimo-v2.6-flash` (30,100 req/5h, $60 cap). Same tier as the default `build`
+   agent, so it shares headroom with everyday coding work without contention.
+3. **Long-document paging** — full papers, long PDFs, or a dense spec that needs
+   to be read start-to-finish rather than skimmed — `longcat-2.0` (11,400 req/5h,
+   $60 cap) or, when the source is peak-hour DeepSeek pricing sensitive,
+   `deepseek-v4-flash` (13,000 req/5h, $30 cap; note the Peak/Off-Peak split in
+   §2). Route figures, plots or scanned/rendered pages through
+   `deepseek-v4-flash-vision-exp` (6,500 req/5h, $15 cap) — it's the only
+   vision-capable model in Go, so anything with a chart or a screenshot has to go
+   through it specifically rather than a text-only flash model.
+4. **Default synthesis** — turning triaged notes into a structured brief with
+   citations — `glm-5.2` (880 req/5h, $60 cap). This is what the `research`
+   subagent in §5 runs by default; the $60 cap means you can synthesize several
+   briefs a day without worrying about the bucket.
+5. **Final hard synthesis only** — reconciling conflicting sources, writing the
+   one paragraph that has to be exactly right, or a literature-review-style pass
+   across everything gathered — `kimi-k3` (110 req/5h, $15 cap). This is the most
+   expensive step in the ladder by a wide margin, so route only the last,
+   highest-stakes pass through it, and treat DeepSeek V4.1 Flash's 4× promo
+   (§2, ends **Sep 27, 2026**) as a temporary reason to lean on it instead for
+   mid-tier synthesis while it lasts.
 
-The pattern for a research session: `paper-search`/Tavily to find, `webfetch` to
-read, Open Notebook to persist and chat with the corpus, and the `research` subagent
-to synthesize.
+The pattern for a full research session: `paper-search`/Tavily to find, `webfetch`
+to read, the `longread` or `vision` subagent (§5/§7) to pre-digest anything long
+or image-heavy, Open Notebook to persist and chat with the corpus, and the
+`research` subagent to synthesize — escalating to `architect` (running `kimi-k3`)
+only for the final pass.
 
 ---
 
-## 10. IDE and GUI integration (and completions)
+## 9. IDE and GUI integration (and completions)
 
 - **Extensions** ship for **VS Code, Cursor, Zed, Windsurf and VSCodium** (install
   links on <https://opencode.ai/download>). The VS Code-family extension embeds the
@@ -778,7 +783,7 @@ to synthesize.
 
 ---
 
-## 11. NanoClaw integration
+## 10. NanoClaw integration
 
 [NanoClaw](https://github.com/nanocoai/nanoclaw) is a lightweight,
 container-per-session personal AI agent you message from WhatsApp, Telegram, Slack,
@@ -802,7 +807,7 @@ OpenCode as the heavy coding/research terminal.
 
 ---
 
-## 12. Productivity tools (MCP)
+## 11. Productivity tools (MCP)
 
 All endpoints verified Sep 2026. Wire them globally (or per project) and enable the
 ones you need; remote servers keep the config clean:
@@ -842,108 +847,129 @@ context upfront, so a big skills folder doesn't tax everyday token usage.
 
 ---
 
-## 13. What lives in this folder
+## 12. What lives in this folder
 
 ```
 README.md            this guide (v2-only, verified Sep 2026)
 AGENTS.md            project-level agent rules (auto-loaded in this folder)
 opencode.jsonc       the global config from §5 — copy to ~/.config/opencode/
 cli.json             terminal settings from §5.1 — copy to ~/.config/opencode/
-server.py            pydantic-tools MCP server (mcp>=1.30,<2 pin)
-mcp_server.py        langgraph-agent MCP server (same pin)
-graph.py             LangGraph plan→analyze→summarize review workflow
-.env.example         env vars for the optional layers (no LiteLLM anymore)
+.env.example         env vars for the optional layers (websearch provider keys, etc.)
 .gitignore           keeps .env, caches, and test artifacts out of git
 .zcodeignore         auto-synced mirror of .gitignore for the ZCode workspace
 ```
 
 Removed in this revision: `config.yaml` and `docker-compose.yml` (the LiteLLM +
-Postgres + Redis layer) and `tui.json` (v1 client config, replaced by `cli.json`).
+Postgres + Redis layer), `tui.json` (v1 client config, replaced by `cli.json`), and
+`server.py` / `mcp_server.py` / `graph.py` — the Pydantic-validated project-ops
+tools and LangGraph review pipeline. They still work if you want to reintroduce
+them (pin `mcp[cli]>=1.30,<2` if you do — `pip install mcp` now resolves to 2.x,
+which removed `mcp.server.fastmcp`), but this revision drops them: a single-call
+`architect` subagent (§5, §7) gets the same reviewed-diff outcome for roughly a
+third of the LLM calls, with no extra tool-schema context cost on every session.
 
 ---
 
-## 14. Verification log (2026-09-23)
+## 13. Verification log (2026-09-23)
 
-Verified against the live docs, repos and package indexes this pass:
+This revision was re-audited directly against the live pages (not against a prior
+draft's claims) on **2026-09-23**:
 
-- **v2 product surface** — from the docs under <https://opencode.ai/v2/docs>
-  (intro, config, agents, models, permissions, tools, mcp-servers, skills, commands,
-  compaction, formatters, snapshots, warming, websearch, instructions, policies,
-  sharing, migrate-v1, troubleshooting, and the CLI pages for intro/TUI/Settings/
-  Web/ACP/Keybinds): shared background service, `run`/`mini`, `pair`/`serve`/
-  `--server`/`--standalone`, session tabs, worktrees, snapshots+undo/redo,
-  `permissions` arrays (last match wins; `shell` not `bash`), `agents`/`commands`/
-  `plugins` plurals, `mcp.servers` + `disabled`, Code Mode default, compaction
-  `keep`/`buffer`, the four websearch providers, and the full `cli.json` key list.
-  **Sharing** is verbatim "OpenCode V2 does not support session sharing yet."
-- **Go** — $10/month; per-model dollar caps; 5 h = 20%, weekly = 50%, monthly = 100%;
-  the usage-estimate table cross-checked against a community snapshot independently
-  verified 2026-09-12 (5-hour figures matched exactly), and per-model caps
-  spot-confirmed from a public Console report in issue #46365 (Aug 31, 2026);
-  Usage/Budgets console APIs; the *Known problematic clients* list (GitHub Copilot
-  Chat, Kimi Code, MiMo Code, DeepSeek Harness) and validated clients (Hermes,
-  Claude Code, Codex, ZCode, Pi, jcode, Kilo Code CLI); privacy/retention table;
-  `x-opencode-session` requirement; `opencode-go/<model-id>` config format.
-- **Releases & installs** — AUR `opencode-beta` **2.0.14-1** (last updated
-  2026-09-22, conflicts with `opencode`/`opencode2`); AUR `opencode-desktop-bin`
-  **2.0.14-1** (2026-09-22, builds the upstream
-  `opencode-desktop-2.0.14-linux-*.deb`); <https://opencode.ai/download> lists
-  Desktop builds for macOS (Apple silicon/Intel), Windows (x64/ARM64) and Linux
-  (.deb/.rpm/AppImage); the `opencode-desktop` **Homebrew cask still showed
-  1.18.32**; GitHub releases still attach to the 1.18.x line (latest v1.18.32,
-  Sep 21, 2026) while v2 ships via the docs' installers/`npm @opencode/cli`;
-  v1/v2 are **no longer installed side by side**.
-- **Open issues used as caveats** — #48330 (Copilot legacy-plan request drain,
-  open), #49847 (ChatGPT-OAuth requests sent with the Zen key, open),
-  #46365 (usage accounting discrepancy, open), microsoft/vscode#334186 (missing
-  session header, open/stale).
-- **Python stack** — `mcp` 2.2.0 is current and **removed `mcp.server.fastmcp`**;
-  the 1.x branch lives on (1.30.0, Sep 7 2026) which is why the pins are
-  `>=1.30,<2`. langgraph 1.2.12; langchain-openai 1.6.4; pydantic 2.x.
+- **Go model lineup and pricing** — fetched <https://opencode.ai/docs/go/> directly
+  (page stamped "Last updated: Sep 22, 2026") and cross-checked against
+  <https://opencode.ai/go>. The full 29-model "current list of models," every
+  per-model monthly cap, every 5-hour request estimate, the Peak/Off-Peak
+  DeepSeek split, and the privacy/retention table in §2 and §13 come straight off
+  that page — this closes out gaps a previous pass had marked "—" (not
+  independently verified) for models like LongCat-2.0, Qwen3.7/3.8 Flash/Max,
+  MiniMax M2.7/M3, MiMo-Pro variants, GLM-5.2/5.1, Grok 4.7/4.6, Qwen3.7 Max and
+  GPT 5.6 Luna. **MiniMax M2.5** appears in the endpoints/privacy tables but not
+  the usage-limits or estimated-requests tables — treat it as legacy. The
+  **DeepSeek V4.1 Flash 4× promo and its Sep 27, 2026 end date** are stated
+  verbatim on the live pricing table, not a rumor.
+- **v2 product surface** — refetched <https://opencode.ai/v2/docs> directly: the
+  intro page confirms the shared install flow (`curl .../v2/install`, `npm i -g
+  @opencode/cli`, etc.), Desktop/Web/Docker instructions, and that OpenCode Go is
+  presented as the recommended low-cost provider. The docs' left-nav (config,
+  agents, models, skills, commands, plugins, providers, websearch, network,
+  snapshots, compaction, formatters, references, attachments, tools, mcp-servers,
+  permissions, policies, instructions, sharing, warming) matches what earlier
+  passes described; **Sharing** and **Instructions** were not independently
+  re-opened this pass — treat those two specific claims (no session sharing yet;
+  `instructions` entries accepted but unloaded) as carried over, not re-verified.
+- **⚠ Version discrepancy — worth running `opencode --version` yourself.** The
+  live v2 docs intro page's CLI/Desktop download links currently resolve to build
+  **2.0.6** (e.g. `.../files/bin/2.0.6/opencode-darwin-arm64.zip`), not 2.0.14.
+  Separately, <https://opencode.ai/download> lists installers via `curl`,
+  `npm`, `brew install anomalyco/tap/opencode-v2`, and `paru/yay -S opencode-beta`
+  for the CLI, and `brew install --cask opencode-desktop` plus direct "stable"
+  download links for Desktop — but that page's Desktop section only shows macOS
+  (Apple Silicon/Intel), Windows (x64), and Linux .deb/.rpm; it did **not** show a
+  Windows ARM64 build or a Linux AppImage in this pass's fetch, where an earlier
+  draft of this guide claimed both existed. Reconcile the "v2.0.14" figure (this
+  revision's title no longer asserts a specific version number for that reason)
+  against `opencode --version` and the AUR package pages before relying on it; the
+  discrepancy could reflect a lagging CDN cache on the docs page, a beta/dev
+  channel AUR build running ahead of the stable download page, or simply that both
+  pages had moved on again by the time you're reading this.
+- **Open issues used as caveats** — #48330 (Copilot legacy-plan request drain),
+  #49847 (ChatGPT-OAuth requests sent with the Zen key), #46365 (usage accounting
+  discrepancy), microsoft/vscode#334186 (missing session header) — these were
+  **not** re-opened this pass; treat their "open"/"stale" status as of whenever
+  they were last checked, not as of 2026-09-23.
 - **Ecosystem** — anthropics/skills (incl. docx/pptx/xlsx/pdf), nanocoai/nanoclaw
   (containers, chat apps, `/add-opencode`, Anthropic SDK + base-URL override),
   lfnovo/open-notebook + Epochal-dev/open-notebook-mcp (39 tools), openags/
   paper-search-mcp (MIT; arXiv/PubMed/bioRxiv/medRxiv/Europe PMC/OpenAlex…),
   GitHub remote MCP (`api.githubcopilot.com/mcp/`), Linear (`mcp.linear.app/mcp`),
   Notion (hosted remote MCP), Google Calendar MCP (Developer Preview), and Zed's
-  edit-prediction keys (`provider`, `prompt_format`: `infer`/`zeta2`/`zeta2_1`).
-- **Local files** — `graph.py`, `mcp_server.py`, `server.py` all pass
-  `python3 -m py_compile`; `opencode.jsonc`/`cli.json` parse as JSON/JSONC; no file
-  in this folder references LiteLLM anymore.
+  edit-prediction keys (`provider`, `prompt_format`: `infer`/`zeta2`/`zeta2_1`) —
+  **not** re-opened this pass; carried over from the prior audit.
 
-**Not independently re-verified this pass** (flagged inline where used): some
-per-model Go caps and per-1M-token prices; the DeepSeek V4.1 Flash 4× promo and its
-Sep 27, 2026 end date; the exact v2 `watcher` config shape; `agents.title`/`summary`
-model overrides; and the Google Calendar MCP endpoint path. Treat the Go docs page
-and `/models` as the source of truth for anything in that list.
+**Not independently re-verified this pass:** the exact v2 `watcher` config shape;
+`agents.title`/`summary` model overrides; the Google Calendar MCP endpoint path;
+and everything under "Ecosystem" and "Open issues" above. Treat the Go docs page
+and `/models` as the source of truth for model IDs/caps, and <https://opencode.ai/v2/docs>
+as the source of truth for product behavior, since both move fast.
+
+**Removed in this revision:** the "Optional: Pydantic + LangGraph MCP servers"
+section and its accompanying `server.py`/`mcp_server.py`/`graph.py` files (§12) —
+per request, all Pydantic/LangGraph content has been stripped from this guide.
 
 ---
 
-## 15. Sources (fetched 2026-09-21 → 2026-09-23)
+## 14. Sources (fetched 2026-09-23)
 
-- **v2 docs:** <https://opencode.ai/v2/docs> · `/config` · `/agents` · `/models` ·
-  `/permissions` · `/tools` · `/mcp-servers` · `/skills` · `/commands` ·
-  `/compaction` · `/formatters` · `/snapshots` · `/warming` · `/websearch` ·
-  `/instructions` · `/policies` · `/sharing` · `/migrate-v1` · `/troubleshooting` ·
-  `/cli` · `/cli/tui` · `/cli/config` · `/cli/web` · `/cli/acp` · `/cli/keybinds`
-- **Console / Go:** <https://opencode.ai/docs/go> ·
+- **v2 docs:** <https://opencode.ai/v2/docs> (refetched directly this pass) ·
+  `/config` · `/agents` · `/models` · `/permissions` · `/tools` · `/mcp-servers` ·
+  `/skills` · `/commands` · `/compaction` · `/formatters` · `/snapshots` ·
+  `/warming` · `/websearch` · `/instructions` · `/policies` · `/sharing` ·
+  `/migrate-v1` · `/troubleshooting` · `/cli` · `/cli/tui` · `/cli/config` ·
+  `/cli/web` · `/cli/acp` · `/cli/keybinds` — only the intro page was refetched
+  and read directly this pass; the sub-pages listed here were carried over from
+  an earlier pass and were not individually re-opened.
+- **Go:** <https://opencode.ai/docs/go/> and <https://opencode.ai/go> (both
+  refetched directly this pass — this is the primary source for §2 and §13).
+- **Console / Go (carried over, not re-opened this pass):**
   <https://opencode.ai/v2/docs/console/go> ·
   <https://opencode.ai/v2/docs/console/usage> ·
   <https://opencode.ai/v2/docs/console/budgets> · <https://opencode.ai/console>
-- **Schemas:** <https://opencode.ai/config.json> · <https://opencode.ai/v2/cli.json>
-- **Download / packaging:** <https://opencode.ai/download> ·
+- **Schemas (carried over):** <https://opencode.ai/config.json> ·
+  <https://opencode.ai/v2/cli.json>
+- **Download / packaging:** <https://opencode.ai/download> (refetched directly
+  this pass — see the version-discrepancy note in §13) ·
   <https://github.com/anomalyco/opencode/releases> ·
   <https://aur.archlinux.org/packages/opencode-beta> ·
   <https://aur.archlinux.org/packages/opencode-desktop-bin> ·
-  <https://formulae.brew.sh/cask/opencode-desktop>
-- **Issues:** [#48330](https://github.com/anomalyco/opencode/issues/48330) ·
+  <https://formulae.brew.sh/cask/opencode-desktop> — the AUR/GitHub-releases/
+  Homebrew-cask links were carried over, not re-opened, this pass.
+- **Issues (carried over, not re-opened):**
+  [#48330](https://github.com/anomalyco/opencode/issues/48330) ·
   [#49847](https://github.com/anomalyco/opencode/issues/49847) ·
   [#46365](https://github.com/anomalyco/opencode/issues/46365) ·
   [microsoft/vscode#334186](https://github.com/microsoft/vscode/issues/334186)
-- **Package indexes:** <https://pypi.org/project/mcp/> ·
-  <https://pypi.org/project/langgraph/> ·
-  <https://pypi.org/project/langchain-openai/>
-- **Integrations:** [nanocoai/nanoclaw](https://github.com/nanocoai/nanoclaw) ·
+- **Integrations (carried over, not re-opened):**
+  [nanocoai/nanoclaw](https://github.com/nanocoai/nanoclaw) ·
   [lfnovo/open-notebook](https://github.com/lfnovo/open-notebook) ·
   [Epochal-dev/open-notebook-mcp](https://github.com/Epochal-dev/open-notebook-mcp) ·
   [openags/paper-search-mcp](https://github.com/openags/paper-search-mcp) ·
